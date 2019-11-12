@@ -1,9 +1,9 @@
 include config.mk
 
-SRC = duktape.c main.c
+SRC = duktape.c dwmjs.c
 OBJ = ${SRC:.c=.o}
 
-all: options main
+all: options dwmjs
 
 options:
 	@echo build options:
@@ -21,12 +21,12 @@ config.h:
 	@echo creating $@ from config.def.h
 	@cp config.def.h $@
 
-main: ${OBJ}
+dwmjs: ${OBJ}
 	@echo CC -o $@ ${OBJ} ${LDFLAGS}
 	@${CC} -o $@${EXE} ${OBJ} ${LDFLAGS}
 
 clean:
 	@echo cleaning
-	@rm -f main.exe ${OBJ}
+	@rm -f dwmjs.exe ${OBJ}
 
 .PHONY: all options clean
