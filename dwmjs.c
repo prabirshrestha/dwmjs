@@ -98,42 +98,42 @@ jduk_alert(duk_context *ctx) {
 }
 
 duk_ret_t
+jduk_get_all_monitors(duk_context *ctx) {
+    duk_idx_t monitors_array_idx = duk_push_array(ctx);
+    duk_idx_t monitor_count = 0;
+
+    DISPLAY_DEVICE display_device;
+    display_device.cb = sizeof(DISPLAY_DEVICE);
+
+    DWORD deviceNum = 0;
+    while (EnumDisplayDevices(NULL, deviceNum, &display_device, 0)) {
+        DISPLAY_DEVICE new_display_device = {0};
+        new_display_device.cb = sizeof(DISPLAY_DEVICE);
+        DWORD monitorNum = 0;
+        while (EnumDisplayDevices(display_device.DeviceName, monitorNum, &new_display_device, 0))
+        {
+            duk_idx_t device_obj_idx = duk_push_object(ctx);
+
+            duk_push_string(ctx, "id");
+            duk_push_string(ctx, new_display_device.DeviceName);
+            duk_put_prop(ctx, device_obj_idx);
+
+            duk_put_prop_index(ctx, monitors_array_idx, monitor_count);
+            monitor_count++;
+
+            monitorNum++;
+        }
+        deviceNum++;
+    }
+
+    return 1;
+}
+
+duk_ret_t
 jduk_exit(duk_context *ctx) {
     duk_int32_t code = duk_to_int32(ctx, -1);
     cleanup();
     exit(code);
-    return 0;
-}
-
-duk_ret_t
-jduk_call(duk_context *ctx) {
-    duk_idx_t argc = duk_get_top(ctx);
-    if (argc < 1) {
-        MessageBox(NULL, "Invalid number of args provided for dwmjs.call", "dwmjs: call", MB_OK | MB_ICONERROR);
-        // TODO: throw error instead
-        duk_pop(ctx);
-        return -1;
-    }
-
-    if(!duk_is_string(ctx, 0)) {
-        MessageBox(NULL, "Event name should be string", "dwmjs: call", MB_OK | MB_ICONERROR);
-        // TODO: throw error instead
-        duk_pop(ctx);
-        return -1;
-    }
-
-    const char *method = duk_to_string(ctx, 0);
-    if (strcmp(method, "exit") == 0 ) {
-        cleanup();
-        exit(duk_to_int32(ctx, -1));
-    } else if (strcmp(method, "greet") == 0) {
-        MessageBox(NULL, (char*)duk_to_string(ctx, -1), "dwmjs: greet", MB_OK);
-    } else {
-        // TODO: unknown method. throw error
-        MessageBox(NULL, "Unknown", "dwmjs: call()", MB_OK | ERROR);
-    }
-
-    duk_pop(ctx);
     return 0;
 }
 
@@ -169,11 +169,11 @@ jduk_init_context(duk_context *ctx, void *udata) {
 
     duk_idx_t dwmjs_obj_id = duk_push_object(ctx);
 
-    duk_push_c_lightfunc(ctx, jduk_call, 2, 2, 0);
-    duk_put_prop_string(ctx, dwmjs_obj_id, "call");
-
     duk_push_c_lightfunc(ctx, jduk_exit, 1, 1, 0);
     duk_put_prop_string(ctx, dwmjs_obj_id, "exit");
+
+    duk_push_c_lightfunc(ctx, jduk_get_all_monitors, 0, 0, 0);
+    duk_put_prop_string(ctx, dwmjs_obj_id, "getAllMonitors");
 
     duk_put_global_string(ctx, "dwmjs");
 
