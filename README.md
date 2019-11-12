@@ -20,6 +20,9 @@ dwmjs.addEventListener('load', function () {
     const monitors = dwmjs.getAllMonitors();
     alert(JSON.stringify(monitors)); // [{ id: '....' }, { id: '...' }]
 
+    const windows = dwmjs.getAllWindows();
+    alert(JSON.stringify(windows)); // [{ id: '....', { id: '...' } }]
+
     dwmjs.exit(0 /* status code */);
 });
 ```

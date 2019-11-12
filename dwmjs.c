@@ -17,6 +17,7 @@ static duk_context *duk_ctx;
 static void cleanup();
 static void die(const char *fmt, ...);
 static void setup(HINSTANCE hInstance);
+static BOOL CALLBACK scan(HWND hwnd, LPARAM lParam);
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 static void
@@ -41,7 +42,8 @@ cleanup() {
     }
 }
 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK
+WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {
 		case WM_CREATE:
             /* dwmjs.__onmessage('load') */
@@ -150,6 +152,41 @@ jduk_get_all_monitors(duk_context *ctx) {
     return 1;
 }
 
+typedef struct EnumWindowState {
+    duk_context *duk_ctx;
+    duk_int32_t count;
+    duk_idx_t windows_array_idx;
+} EnumWindowState;
+
+BOOL CALLBACK
+scan(HWND hwnd, LPARAM lParam) {
+    EnumWindowState *state;
+    state = (EnumWindowState*)lParam;
+    duk_idx_t window_idx = duk_push_object(state->duk_ctx);
+
+    duk_push_string(state->duk_ctx, "id");
+    duk_push_number(state->duk_ctx, (long)hwnd); // HWND hWnd = (HWND)(LONG_PTR)long_hwnd;
+    duk_put_prop(state->duk_ctx, window_idx);
+
+    duk_put_prop_index(state->duk_ctx, state->windows_array_idx, state->count);
+
+    state->count = state->count + 1;
+
+    return TRUE;
+}
+
+duk_ret_t
+jduk_get_all_windows(duk_context *ctx) {
+    EnumWindowState state;
+    state.duk_ctx = ctx;
+    state.count = 0;
+    state.windows_array_idx = duk_push_array(ctx);
+
+    EnumWindows(scan, (LPARAM)&state);
+
+    return 1;
+}
+
 duk_ret_t
 jduk_exit(duk_context *ctx) {
     duk_int32_t code = duk_to_int32(ctx, -1);
@@ -195,6 +232,9 @@ jduk_init_context(duk_context *ctx, void *udata) {
 
     duk_push_c_lightfunc(ctx, jduk_get_all_monitors, 0, 0, 0);
     duk_put_prop_string(ctx, dwmjs_obj_id, "getAllMonitors");
+
+    duk_push_c_lightfunc(ctx, jduk_get_all_windows, 0, 0, 0);
+    duk_put_prop_string(ctx, dwmjs_obj_id, "getAllWindows");
 
     duk_put_global_string(ctx, "dwmjs");
 
