@@ -112,7 +112,10 @@ jduk_call(duk_context *ctx) {
     }
 
     const char *method = duk_to_string(ctx, 0);
-    if (strcmp(method, "greet") == 0) {
+    if (strcmp(method, "exit") == 0 ) {
+        cleanup();
+        exit(duk_to_int32(ctx, -1));
+    } else if (strcmp(method, "greet") == 0) {
         MessageBox(NULL, (char*)duk_to_string(ctx, -1), "dwmjs: greet", MB_OK);
     } else {
         // TODO: unknown method. throw error
@@ -163,7 +166,7 @@ jduk_init_context(duk_context *ctx, void *udata) {
     duk_push_string(ctx, EVENT_LISTENER_JS_CODE);
     duk_eval(ctx);
 
-    char *evalstr = "dwmjs.addEventListener('load', function () { alert('onload event fired'); })";
+    char *evalstr = "dwmjs.addEventListener('load', function () { alert('onload event fired'); dwmjs.call('exit', 0) })";
     if (duk_peval_string(ctx, evalstr) != 0) {
         die("failed");
     }
