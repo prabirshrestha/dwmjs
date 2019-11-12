@@ -90,8 +90,29 @@ jduk_alert(duk_context *ctx) {
 }
 
 duk_ret_t
-jduk_post_message(duk_context *ctx) {
-    MessageBox(NULL, (char*)duk_to_string(ctx, -1), "dwmjs: post message", MB_OK);
+jduk_call(duk_context *ctx) {
+    duk_idx_t argc = duk_get_top(ctx);
+    if (argc != 2) {
+        MessageBox(NULL, "Invalid number of args provided for dwmjs.call", "dwmjs: call", MB_OK | MB_ICONERROR);
+        // TODO: throw error instead
+        duk_pop(ctx);
+        return -1;
+    }
+
+    if(!duk_is_string(ctx, 0)) {
+        MessageBox(NULL, "Event name should be string", "dwmjs: call", MB_OK | MB_ICONERROR);
+        duk_pop(ctx);
+        return -1;
+    }
+
+    const char *method = duk_to_string(ctx, 0);
+    if (strcmp(method, "greet") == 0) {
+        MessageBox(NULL, (char*)duk_to_string(ctx, -1), "dwmjs: greet", MB_OK);
+    } else {
+        // TODO: unknown method. throw error
+        MessageBox(NULL, "Unknown", "dwmjs: call()", MB_OK | ERROR);
+    }
+
     duk_pop(ctx);
     return 0;
 }
@@ -128,15 +149,15 @@ jduk_init_context(duk_context *ctx, void *udata) {
 
     duk_idx_t dwmjs_obj_id = duk_push_object(ctx);
 
-    duk_push_c_lightfunc(ctx, jduk_post_message, 1, 1, 0);
-    duk_put_prop_string(ctx, dwmjs_obj_id, "postMessage");
+    duk_push_c_lightfunc(ctx, jduk_call, 2, 2, 0);
+    duk_put_prop_string(ctx, dwmjs_obj_id, "call");
 
     duk_put_global_string(ctx, "dwmjs");
 
     duk_push_string(ctx, EVENT_LISTENER_JS_CODE);
     duk_eval(ctx);
 
-    char *evalstr = "alert(JSON.stringify(!!dwmjs.addEventListener))";
+    char *evalstr = "dwmjs.call('greet', 'hi')";
     if (duk_peval_string(ctx, evalstr) != 0) {
         die("failed");
     }
