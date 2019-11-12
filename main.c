@@ -6,25 +6,36 @@
 #endif
 
 #include <windows.h>
+#include <stdlib.h>
 #include "duktape.h"
 
-duk_context*
-vduk_get_context() {
-    static duk_context *ctx = NULL;
-    if(ctx) return ctx;
-    ctx = duk_create_heap_default();
-
-    return ctx;
+static duk_ret_t
+jduk_init_context(duk_context *ctx, void *udata) {
+    duk_push_global_object(ctx);
+    duk_pop(ctx);
+    return 0;
 }
+
 int
 WINAPI WinMain(HINSTANCE hInstance,
                HINSTANCE hPrevInstance,
                LPSTR lpCmdLine,
                int nShowCmd) {
-    duk_context *ctx = vduk_get_context();
-    MessageBox(NULL, "Hello world", "Greeting", MB_OK);
-    if (ctx) {
-        duk_destroy_heap(ctx);
+    duk_context *ctx = duk_create_heap_default();
+    if (!ctx) {
+        MessageBox(NULL, "Failed to create duktape context", "Error", MB_OK);
+        return EXIT_FAILURE;
     }
-    return 0;
+
+    if (duk_safe_call(ctx, jduk_init_context, NULL, 0, 1) != 0) {
+        MessageBox(NULL, "Failed to initialize duktape script", "Error", MB_OK);
+        duk_destroy_heap(ctx);
+        ctx = NULL;
+        return EXIT_FAILURE;
+    }
+
+    MessageBox(NULL, "Hello world", "Greeting", MB_OK);
+    duk_destroy_heap(ctx);
+    ctx = NULL;
+    return EXIT_SUCCESS;
 }
