@@ -98,6 +98,14 @@ jduk_alert(duk_context *ctx) {
 }
 
 duk_ret_t
+jduk_exit(duk_context *ctx) {
+    duk_int32_t code = duk_to_int32(ctx, -1);
+    cleanup();
+    exit(code);
+    return 0;
+}
+
+duk_ret_t
 jduk_call(duk_context *ctx) {
     duk_idx_t argc = duk_get_top(ctx);
     if (argc < 1) {
@@ -163,6 +171,9 @@ jduk_init_context(duk_context *ctx, void *udata) {
 
     duk_push_c_lightfunc(ctx, jduk_call, 2, 2, 0);
     duk_put_prop_string(ctx, dwmjs_obj_id, "call");
+
+    duk_push_c_lightfunc(ctx, jduk_exit, 1, 1, 0);
+    duk_put_prop_string(ctx, dwmjs_obj_id, "exit");
 
     duk_put_global_string(ctx, "dwmjs");
 
