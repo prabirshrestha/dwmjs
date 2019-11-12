@@ -82,9 +82,25 @@ setup(HINSTANCE hInstance) {
 		die("Error creating dwmjs window");
 }
 
+duk_ret_t
+jduk_alert(duk_context *ctx) {
+    MessageBox(NULL, (char*)duk_to_string(ctx, -1), "dwmjs: Info", MB_OK);
+    duk_pop(ctx);
+    return 0;
+}
+
 static duk_ret_t
 jduk_init_context(duk_context *ctx, void *udata) {
     duk_push_global_object(ctx);
+
+    duk_push_c_lightfunc(ctx, jduk_alert, 1, 1, 0);
+    duk_put_prop_string(ctx, -2, "alert");
+
+    char *evalstr = "alert('hello world from dwmjs')";
+    if (duk_peval_string(ctx, evalstr) != 0) {
+        die("failed");
+    }
+
     duk_pop(ctx);
     return 0;
 }
@@ -102,18 +118,17 @@ WINAPI WinMain(HINSTANCE hInstance,
         return EXIT_FAILURE;
     }
 
+    if (duk_safe_call(ctx, jduk_init_context, NULL, 0, 1) != 0) {
+        die("Failed to initialize duktape script");
+        return EXIT_FAILURE;
+    }
+
     setup(hInstance);
     while (GetMessage(&msg, NULL, 0, 0) > 0) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
 
-    if (duk_safe_call(ctx, jduk_init_context, NULL, 0, 1) != 0) {
-        die("Failed to initialize duktape script");
-        return EXIT_FAILURE;
-    }
-
-    MessageBox(NULL, "Hello world", "Greeting", MB_OK);
     cleanup();
     return EXIT_SUCCESS;
 }
