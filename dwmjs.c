@@ -6,10 +6,12 @@
 #endif
 
 #include <windows.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include "duktape.h"
 
 #define NAME					"dwmjs" 	/* Used for window name/class */
+#define PATH_SEPERATOR          "\\"
 static HWND dwmhwnd;
 static duk_context *duk_ctx;
 static void cleanup();
@@ -42,6 +44,7 @@ cleanup() {
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {
 		case WM_CREATE:
+            /* dwmjs.__onmessage('load') */
             duk_get_global_string(duk_ctx, "dwmjs");
             duk_push_string(duk_ctx, "__onmessage");
             duk_push_string(duk_ctx, "load");
@@ -166,9 +169,33 @@ jduk_init_context(duk_context *ctx, void *udata) {
     duk_push_string(ctx, EVENT_LISTENER_JS_CODE);
     duk_eval(ctx);
 
-    char *evalstr = "dwmjs.addEventListener('load', function () { alert('onload event fired'); dwmjs.call('exit', 0) })";
-    if (duk_peval_string(ctx, evalstr) != 0) {
-        die("failed");
+    // init user script from ~/.dwm.js if it exists
+    char *homedir;
+    size_t len;
+    errno_t err;
+    err = _dupenv_s(&homedir, &len, "userprofile" );
+    if (err)
+        die("Failed to get home directory");
+
+    char configfilepath[256];
+    snprintf(configfilepath, sizeof configfilepath, "%s%s%s", homedir, PATH_SEPERATOR, ".dwm.js");
+    free(homedir);
+
+    FILE *configfilestream;
+    err = fopen_s(&configfilestream, configfilepath, "r");
+    if (configfilestream) {
+        fseek(configfilestream, 0, SEEK_END);
+        size_t length = ftell(configfilestream);
+        fseek(configfilestream, 0, SEEK_SET);
+        char *dwmjscontents = (char *) malloc(length + 1);
+        dwmjscontents[length] = '\0';
+        fread(dwmjscontents, 1, length, configfilestream);
+        fclose(configfilestream);
+        if (duk_peval_string(ctx, dwmjscontents) != 0) {
+            die("Failed to execute ~/.dwm.js");
+        }
+    } else {
+        die("Error reading %s config file.", configfilepath);
     }
 
     duk_pop(ctx);
