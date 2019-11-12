@@ -165,7 +165,7 @@ scan(HWND hwnd, LPARAM lParam) {
     duk_idx_t window_idx = duk_push_object(state->duk_ctx);
 
     duk_push_string(state->duk_ctx, "id");
-    duk_push_number(state->duk_ctx, (long)hwnd); // HWND hWnd = (HWND)(LONG_PTR)long_hwnd;
+    duk_push_number(state->duk_ctx, (long)hwnd);
     duk_put_prop(state->duk_ctx, window_idx);
 
     duk_put_prop_index(state->duk_ctx, state->windows_array_idx, state->count);
@@ -183,6 +183,26 @@ jduk_get_all_windows(duk_context *ctx) {
     state.windows_array_idx = duk_push_array(ctx);
 
     EnumWindows(scan, (LPARAM)&state);
+
+    return 1;
+}
+
+duk_ret_t
+jduk_get_window_by_id(duk_context *ctx) {
+    duk_int32_t window_id = duk_to_number(ctx, -1);
+    HWND hwnd = (HWND)(LONG_PTR)window_id;
+
+    duk_idx_t window_obj_idx = duk_push_object(ctx);
+
+    duk_push_string(ctx, "id");
+    duk_push_number(ctx, window_id);
+    duk_put_prop(ctx, window_obj_idx);
+
+    TCHAR buf[500];
+    GetClassName(hwnd, buf, sizeof buf);
+    duk_push_string(ctx, "className");
+    duk_push_string(ctx, buf);
+    duk_put_prop(ctx, window_obj_idx);
 
     return 1;
 }
@@ -235,6 +255,9 @@ jduk_init_context(duk_context *ctx, void *udata) {
 
     duk_push_c_lightfunc(ctx, jduk_get_all_windows, 0, 0, 0);
     duk_put_prop_string(ctx, dwmjs_obj_id, "getAllWindows");
+
+    duk_push_c_lightfunc(ctx, jduk_get_window_by_id, 1, 1, 0);
+    duk_put_prop_string(ctx, dwmjs_obj_id, "getWindowById");
 
     duk_put_global_string(ctx, "dwmjs");
 
