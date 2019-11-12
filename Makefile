@@ -1,6 +1,6 @@
 include config.mk
 
-SRC = main.c
+SRC = duktape.c main.c
 OBJ = ${SRC:.c=.o}
 
 all: options main
