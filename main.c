@@ -9,6 +9,17 @@
 #include <stdlib.h>
 #include "duktape.h"
 
+static duk_context *duk_ctx;
+void cleanup();
+
+void
+cleanup() {
+    if (duk_ctx) {
+        duk_destroy_heap(duk_ctx);
+        duk_ctx = NULL;
+    }
+}
+
 static duk_ret_t
 jduk_init_context(duk_context *ctx, void *udata) {
     duk_push_global_object(ctx);
@@ -29,13 +40,11 @@ WINAPI WinMain(HINSTANCE hInstance,
 
     if (duk_safe_call(ctx, jduk_init_context, NULL, 0, 1) != 0) {
         MessageBox(NULL, "Failed to initialize duktape script", "Error", MB_OK);
-        duk_destroy_heap(ctx);
-        ctx = NULL;
+        cleanup();
         return EXIT_FAILURE;
     }
 
     MessageBox(NULL, "Hello world", "Greeting", MB_OK);
-    duk_destroy_heap(ctx);
-    ctx = NULL;
+    cleanup();
     return EXIT_SUCCESS;
 }
