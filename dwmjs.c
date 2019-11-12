@@ -96,6 +96,29 @@ jduk_post_message(duk_context *ctx) {
     return 0;
 }
 
+#define EVENT_LISTENER_JS_CODE "(function(dwmjs) {"\
+    "var listeners = {};"\
+    "dwmjs.__onmessage = function (type, data) {"\
+    "   var callbacks = listeners[type];"\
+    "   if (callbacks) {"\
+    "       for (var i = 0; i < callbacks.lenght; i++) {"\
+    "           callbacks[i](data);"\
+    "       }"\
+    "   }"\
+    "};"\
+    "dwmjs.addEventListener = function (type, callback) {"\
+    "   var callbacks = listeners[event];"\
+    "    if (!callbacks) { callbacks = listeners[event] = []; }"\
+    "    callbacks.push(callback);"\
+    "};"\
+    "dwmjs.removeEventListener = function (type, callback) {"\
+    "    var callbacks = listeners[event];"\
+    "    if (callbacks) {"\
+    "        callbacks[type].splice(callbacks[type].indexOf(callback) >>> 0, 1);"\
+    "    }"\
+    "};"\
+    "})(dwmjs);"
+
 static duk_ret_t
 jduk_init_context(duk_context *ctx, void *udata) {
     duk_push_global_object(ctx);
@@ -110,7 +133,10 @@ jduk_init_context(duk_context *ctx, void *udata) {
 
     duk_put_global_string(ctx, "dwmjs");
 
-    char *evalstr = "alert(JSON.stringify(!!dwmjs.postMessage))";
+    duk_push_string(ctx, EVENT_LISTENER_JS_CODE);
+    duk_eval(ctx);
+
+    char *evalstr = "alert(JSON.stringify(!!dwmjs.addEventListener))";
     if (duk_peval_string(ctx, evalstr) != 0) {
         die("failed");
     }
