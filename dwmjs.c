@@ -115,7 +115,7 @@ jduk_get_all_monitors(duk_context *ctx) {
             duk_idx_t device_obj_idx = duk_push_object(ctx);
 
             duk_push_string(ctx, "id");
-            duk_push_string(ctx, new_display_device.DeviceName);
+            duk_push_string(ctx, new_display_device.DeviceID);
             duk_put_prop(ctx, device_obj_idx);
 
             duk_put_prop_index(ctx, monitors_array_idx, monitor_count);
