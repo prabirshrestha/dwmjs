@@ -96,7 +96,10 @@ jduk_init_context(duk_context *ctx, void *udata) {
     duk_push_c_lightfunc(ctx, jduk_alert, 1, 1, 0);
     duk_put_prop_string(ctx, -2, "alert");
 
-    char *evalstr = "alert('hello world from dwmjs')";
+    duk_push_object(ctx);
+    duk_put_global_string(ctx, "dwmjs");
+
+    char *evalstr = "alert(JSON.stringify(dwmjs))";
     if (duk_peval_string(ctx, evalstr) != 0) {
         die("failed");
     }
