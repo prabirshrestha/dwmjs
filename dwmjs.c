@@ -42,6 +42,11 @@ cleanup() {
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {
 		case WM_CREATE:
+            duk_get_global_string(duk_ctx, "dwmjs");
+            duk_push_string(duk_ctx, "__onmessage");
+            duk_push_string(duk_ctx, "load");
+            duk_pcall_prop(duk_ctx, -3, 1);
+            duk_pop_2(duk_ctx);
 			break;
         case WM_CLOSE:
 			cleanup();
@@ -92,7 +97,7 @@ jduk_alert(duk_context *ctx) {
 duk_ret_t
 jduk_call(duk_context *ctx) {
     duk_idx_t argc = duk_get_top(ctx);
-    if (argc != 2) {
+    if (argc < 1) {
         MessageBox(NULL, "Invalid number of args provided for dwmjs.call", "dwmjs: call", MB_OK | MB_ICONERROR);
         // TODO: throw error instead
         duk_pop(ctx);
@@ -101,6 +106,7 @@ jduk_call(duk_context *ctx) {
 
     if(!duk_is_string(ctx, 0)) {
         MessageBox(NULL, "Event name should be string", "dwmjs: call", MB_OK | MB_ICONERROR);
+        // TODO: throw error instead
         duk_pop(ctx);
         return -1;
     }
@@ -122,18 +128,18 @@ jduk_call(duk_context *ctx) {
     "dwmjs.__onmessage = function (type, data) {"\
     "   var callbacks = listeners[type];"\
     "   if (callbacks) {"\
-    "       for (var i = 0; i < callbacks.lenght; i++) {"\
+    "       for (var i = 0; i < callbacks.length; i++) {"\
     "           callbacks[i](data);"\
     "       }"\
     "   }"\
     "};"\
     "dwmjs.addEventListener = function (type, callback) {"\
-    "   var callbacks = listeners[event];"\
-    "    if (!callbacks) { callbacks = listeners[event] = []; }"\
+    "   var callbacks = listeners[type];"\
+    "    if (!callbacks) { callbacks = listeners[type] = []; }"\
     "    callbacks.push(callback);"\
     "};"\
     "dwmjs.removeEventListener = function (type, callback) {"\
-    "    var callbacks = listeners[event];"\
+    "    var callbacks = listeners[type];"\
     "    if (callbacks) {"\
     "        callbacks[type].splice(callbacks[type].indexOf(callback) >>> 0, 1);"\
     "    }"\
@@ -157,7 +163,7 @@ jduk_init_context(duk_context *ctx, void *udata) {
     duk_push_string(ctx, EVENT_LISTENER_JS_CODE);
     duk_eval(ctx);
 
-    char *evalstr = "dwmjs.call('greet', 'hi')";
+    char *evalstr = "dwmjs.addEventListener('load', function () { alert('onload event fired'); })";
     if (duk_peval_string(ctx, evalstr) != 0) {
         die("failed");
     }
@@ -173,13 +179,13 @@ WINAPI WinMain(HINSTANCE hInstance,
                int nShowCmd) {
     MSG msg;
 
-    duk_context *ctx = duk_create_heap_default();
-    if (!ctx) {
+    duk_ctx = duk_create_heap_default();
+    if (!duk_ctx) {
         die("Failed to create duktape context");
         return EXIT_FAILURE;
     }
 
-    if (duk_safe_call(ctx, jduk_init_context, NULL, 0, 1) != 0) {
+    if (duk_safe_call(duk_ctx, jduk_init_context, NULL, 0, 1) != 0) {
         die("Failed to initialize duktape script");
         return EXIT_FAILURE;
     }
