@@ -89,6 +89,13 @@ jduk_alert(duk_context *ctx) {
     return 0;
 }
 
+duk_ret_t
+jduk_post_message(duk_context *ctx) {
+    MessageBox(NULL, (char*)duk_to_string(ctx, -1), "dwmjs: post message", MB_OK);
+    duk_pop(ctx);
+    return 0;
+}
+
 static duk_ret_t
 jduk_init_context(duk_context *ctx, void *udata) {
     duk_push_global_object(ctx);
@@ -96,10 +103,14 @@ jduk_init_context(duk_context *ctx, void *udata) {
     duk_push_c_lightfunc(ctx, jduk_alert, 1, 1, 0);
     duk_put_prop_string(ctx, -2, "alert");
 
-    duk_push_object(ctx);
+    duk_idx_t dwmjs_obj_id = duk_push_object(ctx);
+
+    duk_push_c_lightfunc(ctx, jduk_post_message, 1, 1, 0);
+    duk_put_prop_string(ctx, dwmjs_obj_id, "postMessage");
+
     duk_put_global_string(ctx, "dwmjs");
 
-    char *evalstr = "alert(JSON.stringify(dwmjs))";
+    char *evalstr = "alert(JSON.stringify(!!dwmjs.postMessage))";
     if (duk_peval_string(ctx, evalstr) != 0) {
         die("failed");
     }
