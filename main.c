@@ -11,6 +11,21 @@
 
 static duk_context *duk_ctx;
 void cleanup();
+void die(const char *fmt, ...);
+
+void
+die(const char *fmt, ...) {
+    char buf[5000];
+    va_list args;
+    va_start(args, fmt);
+    vsprintf_s(buf, 5000, fmt, args);
+    va_end(args);
+
+    MessageBox(NULL, buf, "Fatal error", MB_OK | MB_ICONERROR);
+
+	cleanup();
+	exit(EXIT_FAILURE);
+}
 
 void
 cleanup() {
@@ -34,13 +49,12 @@ WINAPI WinMain(HINSTANCE hInstance,
                int nShowCmd) {
     duk_context *ctx = duk_create_heap_default();
     if (!ctx) {
-        MessageBox(NULL, "Failed to create duktape context", "Error", MB_OK);
+        die("Failed to create duktape context");
         return EXIT_FAILURE;
     }
 
     if (duk_safe_call(ctx, jduk_init_context, NULL, 0, 1) != 0) {
-        MessageBox(NULL, "Failed to initialize duktape script", "Error", MB_OK);
-        cleanup();
+        die("Failed to initialize duktape script");
         return EXIT_FAILURE;
     }
 
