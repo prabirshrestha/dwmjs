@@ -11,6 +11,7 @@
 #include "duktape.h"
 
 #define NAME					"dwmjs" 	/* Used for window name/class */
+#define BARNAME					"dwmjsbar" 	/* Used for window name/class */
 #define PATH_SEPERATOR          "\\"
 static HWND dwmhwnd;
 static duk_context *duk_ctx;
@@ -22,6 +23,7 @@ RegisterShellHookWindowProc _RegisterShellHookWindow;
 static void cleanup();
 static void die(const char *fmt, ...);
 static void setup(HINSTANCE hInstance);
+static void setupbar(HINSTANCE hInstance);
 static BOOL CALLBACK scan(HWND hwnd, LPARAM lParam);
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -147,6 +149,54 @@ setup(HINSTANCE hInstance) {
 	_RegisterShellHookWindow(dwmhwnd);
 	/* Grab a dynamic id for the SHELLHOOK message to be used later */
 	shellhookid = RegisterWindowMessage("SHELLHOOK");
+
+    setupbar(hInstance);
+}
+
+LRESULT CALLBACK barhandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_CREATE:
+            /* updatebar(); */
+            break;
+        case WM_PAINT: {
+            PAINTSTRUCT ps;
+            BeginPaint(hwnd, &ps);
+            /* drawbar(); */
+            EndPaint(hwnd, &ps);
+            break;
+        }
+        case WM_LBUTTONDOWN:
+        case WM_RBUTTONDOWN:
+        case WM_MBUTTONDOWN:
+            /* buttonpress(msg, &MAKEPOINTS(lParam)); */
+            break;
+        case WM_TIMER:
+            /* drawbar(); */
+        default:
+            return DefWindowProc(hwnd, msg, wParam, lParam);
+    }
+
+	return 0;
+}
+
+static void
+setupbar(HINSTANCE hInstance) {
+    WNDCLASS winClass;
+	memset(&winClass, 0, sizeof winClass);
+
+	winClass.style = 0;
+	winClass.lpfnWndProc = barhandler;
+	winClass.cbClsExtra = 0;
+	winClass.cbWndExtra = 0;
+	winClass.hInstance = hInstance;
+	winClass.hIcon = NULL;
+	winClass.hCursor = LoadCursor(NULL, IDC_ARROW);
+	winClass.hbrBackground = NULL;
+	winClass.lpszMenuName = NULL;
+	winClass.lpszClassName = BARNAME;
+
+	if (!RegisterClass(&winClass))
+		die("Error registering dwmjs-bar window class");
 }
 
 duk_ret_t
