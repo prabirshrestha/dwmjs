@@ -3,6 +3,7 @@
 
 #if _MSC_VER
 #pragma comment(lib,"user32.lib")
+#pragma comment(lib,"gdi32.lib")
 #endif
 
 #include <windows.h>
@@ -14,6 +15,7 @@
 #define BARNAME					"dwmjsbar" 	/* Used for window name/class */
 #define PATH_SEPERATOR          "\\"
 static HWND dwmhwnd;
+static HINSTANCE hinstance;
 static duk_context *duk_ctx;
 
 static UINT shellhookid;
@@ -149,19 +151,24 @@ setup(HINSTANCE hInstance) {
 	_RegisterShellHookWindow(dwmhwnd);
 	/* Grab a dynamic id for the SHELLHOOK message to be used later */
 	shellhookid = RegisterWindowMessage("SHELLHOOK");
-
-    setupbar(hInstance);
 }
 
 LRESULT CALLBACK barhandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_CREATE:
-            /* updatebar(); */
+            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 100, 100, SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
             break;
         case WM_PAINT: {
             PAINTSTRUCT ps;
-            BeginPaint(hwnd, &ps);
-            /* drawbar(); */
+            HDC hdc = BeginPaint(hwnd, &ps);
+            RECT rc;
+            rc.top = 0;
+            rc.left = 0;
+            rc.bottom = 30;
+            rc.right = 100;
+            HBRUSH greenBrush=CreateSolidBrush(RGB(0,255,0));
+            FillRect(hdc, &rc, greenBrush);
+            DeleteObject(greenBrush);
             EndPaint(hwnd, &ps);
             break;
         }
@@ -179,8 +186,10 @@ LRESULT CALLBACK barhandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	return 0;
 }
 
+static int setupbarcomplete = 0;
 static void
 setupbar(HINSTANCE hInstance) {
+    if (setupbarcomplete) { return; }
     WNDCLASS winClass;
 	memset(&winClass, 0, sizeof winClass);
 
@@ -197,6 +206,8 @@ setupbar(HINSTANCE hInstance) {
 
 	if (!RegisterClass(&winClass))
 		die("Error registering dwmjs-bar window class");
+
+    setupbarcomplete = 1;
 }
 
 duk_ret_t
@@ -329,7 +340,6 @@ jduk_set_window_attributes_is_broder_bar_visible(duk_context *ctx, duk_idx_t att
     duk_pop(ctx);
 }
 
-
 void
 jduk_set_window_attributes_is_visible(duk_context *ctx, duk_idx_t attributes_idx, HWND hwnd) {
     duk_get_prop_string(ctx, attributes_idx, "isVisible");
@@ -448,6 +458,25 @@ jduk_bar_ctor(duk_context *ctx) {
         duk_pop(ctx);
     }
 
+    setupbar(hinstance);
+    HWND barhwnd = CreateWindowEx(
+		WS_EX_TOOLWINDOW,
+		BARNAME,
+		NULL, /* window title */
+		WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
+		0, 0, 0, 0,
+		NULL, /* parent window */
+		NULL, /* menu */
+		hinstance,
+		NULL /* lParam */
+	);
+
+    if (!barhwnd) {
+        die("Failed to create bar");
+    }
+
+    PostMessage(barhwnd, WM_PAINT, 0, 0);
+
     return 0;
 }
 
@@ -557,6 +586,7 @@ WINAPI WinMain(HINSTANCE hInstance,
         return EXIT_FAILURE;
     }
 
+    hinstance = hInstance;
     setup(hInstance);
     while (GetMessage(&msg, NULL, 0, 0) > 0) {
         TranslateMessage(&msg);
