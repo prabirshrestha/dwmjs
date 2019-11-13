@@ -267,8 +267,8 @@ jduk_get_window_by_id(duk_context *ctx) {
 }
 
 void
-jduk_set_window_attributes_show_border_bar(duk_context *ctx, duk_idx_t attributes_idx, HWND hwnd) {
-    duk_get_prop_string(ctx, attributes_idx, "showBorderBar");
+jduk_set_window_attributes_is_broder_bar_visible(duk_context *ctx, duk_idx_t attributes_idx, HWND hwnd) {
+    duk_get_prop_string(ctx, attributes_idx, "isBorderBarVisible");
     if (duk_to_boolean(ctx, -1)) {
         SetWindowLong(hwnd, GWL_STYLE, (GetWindowLong(hwnd, GWL_STYLE) | (WS_CAPTION | WS_SIZEBOX)));
     } else {
@@ -300,8 +300,8 @@ jduk_set_window_attributes(duk_context *ctx) {
         return 0;
     }
 
-    if (duk_has_prop_string(ctx, attributes_idx, "showBorderBar")) {
-        jduk_set_window_attributes_show_border_bar(ctx, attributes_idx, hwnd);
+    if (duk_has_prop_string(ctx, attributes_idx, "isBorderBarVisible")) {
+        jduk_set_window_attributes_is_broder_bar_visible(ctx, attributes_idx, hwnd);
     }
 
     if (duk_has_prop_string(ctx, attributes_idx, "isVisible")) {
