@@ -68,29 +68,42 @@ WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             if (msg == shellhookid) { /* Handle the shell hook message */
                 switch (wParam & 0x7fff) {
                     case HSHELL_WINDOWCREATED:
-                        duk_idx_t window_created_event_top = duk_get_top(duk_ctx);
+                        duk_idx_t window_create_event_top = duk_get_top(duk_ctx);
                         duk_get_global_string(duk_ctx, "dwmjs");
                         duk_push_string(duk_ctx, "__onmessage");
-                        duk_push_string(duk_ctx, "windowcreated");
-                        duk_idx_t window_created_event_index = duk_push_object(duk_ctx);
+                        duk_push_string(duk_ctx, "windowcreate");
+                        duk_idx_t window_create_event_index = duk_push_object(duk_ctx);
                         duk_push_string(duk_ctx, "windowId");
                         duk_push_number(duk_ctx, (long)(HWND)lParam);
-                        duk_put_prop(duk_ctx, window_created_event_index);
+                        duk_put_prop(duk_ctx, window_create_event_index);
 
-                        duk_pcall_prop(duk_ctx, window_created_event_top, 2);
+                        duk_pcall_prop(duk_ctx, window_create_event_top, 2);
                         duk_pop(duk_ctx); /* result */
                         break;
                     case HSHELL_WINDOWDESTROYED:
-                        duk_idx_t window_closed_event_top = duk_get_top(duk_ctx);
+                        duk_idx_t window_close_event_top = duk_get_top(duk_ctx);
                         duk_get_global_string(duk_ctx, "dwmjs");
                         duk_push_string(duk_ctx, "__onmessage");
                         duk_push_string(duk_ctx, "windowclose");
-                        duk_idx_t window_closed_event_index = duk_push_object(duk_ctx);
+                        duk_idx_t window_close_event_index = duk_push_object(duk_ctx);
                         duk_push_string(duk_ctx, "windowId");
                         duk_push_number(duk_ctx, (long)(HWND)lParam);
-                        duk_put_prop(duk_ctx, window_closed_event_index);
+                        duk_put_prop(duk_ctx, window_close_event_index);
 
-                        duk_pcall_prop(duk_ctx, window_closed_event_top, 2);
+                        duk_pcall_prop(duk_ctx, window_close_event_top, 2);
+                        duk_pop(duk_ctx); /* result */
+                        break;
+                    case HSHELL_WINDOWACTIVATED:
+                        duk_idx_t window_activate_event_top = duk_get_top(duk_ctx);
+                        duk_get_global_string(duk_ctx, "dwmjs");
+                        duk_push_string(duk_ctx, "__onmessage");
+                        duk_push_string(duk_ctx, "windowfocusin");
+                        duk_idx_t window_activate_event_index = duk_push_object(duk_ctx);
+                        duk_push_string(duk_ctx, "windowId");
+                        duk_push_number(duk_ctx, (long)(HWND)lParam);
+                        duk_put_prop(duk_ctx, window_activate_event_index);
+
+                        duk_pcall_prop(duk_ctx, window_activate_event_top, 2);
                         duk_pop(duk_ctx); /* result */
                         break;
                 }

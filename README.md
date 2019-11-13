@@ -37,6 +37,13 @@ dwmjs.addEventListener('load', function () {
         const window = dwmjs.getWindowById(e.windowId);
     });
 
+    var focused = false;
+    dwmjs.addEventListener('windowfocusin', function (e) {
+        if (focused) { return; }
+        focused = true;
+        const window = dwmjs.getWindowById(e.windowId);
+    });
+
     dwmjs.exit(0 /* status code */);
 });
 ```
