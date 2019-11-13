@@ -310,10 +310,10 @@ jduk_init_context(duk_context *ctx, void *udata) {
     duk_put_prop_string(ctx, dwmjs_obj_id, "exit");
 
     duk_push_c_lightfunc(ctx, jduk_get_all_monitors, 0, 0, 0);
-    duk_put_prop_string(ctx, dwmjs_obj_id, "getAllMonitors");
+    duk_put_prop_string(ctx, dwmjs_obj_id, "getMonitors");
 
     duk_push_c_lightfunc(ctx, jduk_get_all_windows, 0, 0, 0);
-    duk_put_prop_string(ctx, dwmjs_obj_id, "getAllWindows");
+    duk_put_prop_string(ctx, dwmjs_obj_id, "getWindows");
 
     duk_push_c_lightfunc(ctx, jduk_get_window_by_id, 1, 1, 0);
     duk_put_prop_string(ctx, dwmjs_obj_id, "getWindowById");
