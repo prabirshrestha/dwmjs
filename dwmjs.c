@@ -166,6 +166,7 @@ duk_ret_t
 jduk_get_window_by_id(duk_context *ctx) {
     duk_int32_t window_id = duk_to_number(ctx, -1);
     HWND hwnd = (HWND)(LONG_PTR)window_id;
+    TCHAR buf[500];
 
     duk_idx_t window_obj_idx = duk_push_object(ctx);
 
@@ -173,9 +174,35 @@ jduk_get_window_by_id(duk_context *ctx) {
     duk_push_number(ctx, window_id);
     duk_put_prop(ctx, window_obj_idx);
 
-    TCHAR buf[500];
+    HWND parent = GetParent(hwnd);
+    duk_push_string(ctx, "parentId");
+    duk_push_number(ctx, (long)parent);
+    duk_put_prop(ctx, window_obj_idx);
+
+    duk_push_string(ctx, "hasParent");
+    duk_push_boolean(ctx, parent != NULL);
+    duk_put_prop(ctx, window_obj_idx);
+
+    int exstyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+
+    int istooltip = exstyle & WS_EX_TOOLWINDOW;
+    duk_push_string(ctx, "isTooltip");
+    duk_push_boolean(ctx, istooltip > 0);
+    duk_put_prop(ctx, window_obj_idx);
+
+    duk_push_string(ctx, "isVisible");
+    duk_push_boolean(ctx, IsWindowVisible(hwnd) > 0);
+    duk_put_prop(ctx, window_obj_idx);
+
+    ZeroMemory(buf, 500);
     GetClassName(hwnd, buf, sizeof buf);
     duk_push_string(ctx, "className");
+    duk_push_string(ctx, buf);
+    duk_put_prop(ctx, window_obj_idx);
+
+    ZeroMemory(buf, 500);
+    GetWindowText(hwnd, buf, sizeof buf);
+    duk_push_string(ctx, "title");
     duk_push_string(ctx, buf);
     duk_put_prop(ctx, window_obj_idx);
 
