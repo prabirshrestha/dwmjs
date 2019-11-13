@@ -62,6 +62,8 @@ dwmjs.addEventListener('load', function () {
         foregroundColor: '#cccccc',
     });
 
+    var barAttributes = bar.getAttributes();
+
     dwmjs.exit(0 /* status code */);
 });
 ```

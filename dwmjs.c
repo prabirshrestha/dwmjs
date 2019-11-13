@@ -475,7 +475,40 @@ jduk_bar_ctor(duk_context *ctx) {
         die("Failed to create bar");
     }
 
+    duk_push_this(ctx);
+
+    duk_push_int(ctx, (long)barhwnd);
+    duk_put_prop_string(ctx, -2, DUK_HIDDEN_SYMBOL("id"));
+
     PostMessage(barhwnd, WM_PAINT, 0, 0);
+
+    return 0;
+}
+
+duk_ret_t
+jduk_bar_get_attributes(duk_context *ctx) {
+    duk_push_this(ctx);
+
+    duk_get_prop_string(ctx, -1, DUK_HIDDEN_SYMBOL("id"));
+    duk_int32_t id = duk_to_int(ctx, -1);
+
+    duk_idx_t result_obj_idx = duk_push_object(ctx);
+
+    duk_push_literal(ctx, "id");
+    duk_push_int(ctx, id);
+    duk_put_prop(ctx, result_obj_idx);
+
+    return 1;
+}
+
+duk_ret_t
+jduk_bar_set_attributes(duk_context *ctx) {
+    duk_push_this(ctx);
+
+    duk_get_prop_string(ctx, -1, DUK_HIDDEN_SYMBOL("id"));
+    duk_int32_t id = duk_to_int(ctx, -1);
+
+    // TODO
 
     return 0;
 }
@@ -528,6 +561,16 @@ jduk_init_context(duk_context *ctx, void *udata) {
     duk_put_prop_string(ctx, dwmjs_obj_id, "setWindowAttributes");
 
     duk_push_c_function(ctx, jduk_bar_ctor, 1); // var bar = new dwmjs.Bar();
+    duk_push_object(ctx); // [Bar proto]
+
+    duk_push_c_lightfunc(ctx, jduk_bar_get_attributes, 0, 0, 0);
+    duk_put_prop_string(ctx, -2, "getAttributes");
+
+    duk_push_c_function(ctx, jduk_bar_set_attributes, 1);
+    duk_put_prop_string(ctx, -2, "setAttributes");
+
+    duk_put_prop_string(ctx, -2, "prototype");
+
     duk_put_prop_string(ctx, dwmjs_obj_id, "Bar");
 
     duk_put_global_string(ctx, "dwmjs");
