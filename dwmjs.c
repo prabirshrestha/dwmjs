@@ -279,6 +279,15 @@ jduk_set_window_attributes_show_border_bar(duk_context *ctx, duk_idx_t attribute
     duk_pop(ctx);
 }
 
+
+void
+jduk_set_window_attributes_is_visible(duk_context *ctx, duk_idx_t attributes_idx, HWND hwnd) {
+    duk_get_prop_string(ctx, attributes_idx, "isVisible");
+    duk_bool_t isvisible = duk_to_boolean(ctx, -1);
+    SetWindowPos(hwnd, 0, 0, 0, 0, 0, (isvisible ? SWP_SHOWWINDOW : SWP_HIDEWINDOW) | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
+    duk_pop(ctx);
+}
+
 duk_ret_t
 jduk_set_window_attributes(duk_context *ctx) {
     duk_idx_t window_id_idx = 0;
@@ -293,6 +302,10 @@ jduk_set_window_attributes(duk_context *ctx) {
 
     if (duk_has_prop_string(ctx, attributes_idx, "showBorderBar")) {
         jduk_set_window_attributes_show_border_bar(ctx, attributes_idx, hwnd);
+    }
+
+    if (duk_has_prop_string(ctx, attributes_idx, "isVisible")) {
+        jduk_set_window_attributes_is_visible(ctx, attributes_idx, hwnd);
     }
 
     duk_pop(ctx);

@@ -44,7 +44,8 @@ dwmjs.addEventListener('load', function () {
         const window = dwmjs.getWindowById(e.windowId);
         if (window.className == 'Vim') {
             dwmjs.setWindowAttributes(window.id, {
-                showBroderBar: false
+                showBroderBar: false,
+                isVisible: true
             })
         }
     });
