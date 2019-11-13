@@ -14,6 +14,11 @@
 #define PATH_SEPERATOR          "\\"
 static HWND dwmhwnd;
 static duk_context *duk_ctx;
+
+static UINT shellhookid;
+typedef BOOL (*RegisterShellHookWindowProc) (HWND);
+RegisterShellHookWindowProc _RegisterShellHookWindow;
+
 static void cleanup();
 static void die(const char *fmt, ...);
 static void setup(HINSTANCE hInstance);
@@ -60,7 +65,28 @@ WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 			PostQuitMessage(0);
 			break;
         default:
-            return DefWindowProc(hwnd, msg, wParam, lParam);
+            if (msg == shellhookid) { /* Handle the shell hook message */
+                switch (wParam & 0x7fff) {
+                    case HSHELL_WINDOWCREATED:
+                        duk_get_global_string(duk_ctx, "dwmjs");
+                        duk_push_string(duk_ctx, "__onmessage");
+                        duk_push_string(duk_ctx, "windowcreated");
+                        duk_idx_t event_index = duk_push_object(duk_ctx);
+                        duk_push_string(duk_ctx, "windowId");
+                        duk_push_number(duk_ctx, (long)(HWND)lParam);
+                        duk_put_prop(duk_ctx, event_index);
+
+                        duk_pcall_prop(duk_ctx, -4, 2);
+                        duk_pop(duk_ctx); /* result */
+                        duk_pop(duk_ctx); /* param */
+                        duk_pop(duk_ctx); /* obj */
+                        break;
+                    case HSHELL_WINDOWDESTROYED:
+                        break;
+                }
+            } else {
+                return DefWindowProc(hwnd, msg, wParam, lParam);
+            }
     }
 
     return 0;
@@ -90,6 +116,14 @@ setup(HINSTANCE hInstance) {
 
 	if (!dwmhwnd)
 		die("Error creating dwmjs window");
+
+    /* Get function pointer for RegisterShellHookWindow */
+	_RegisterShellHookWindow = (RegisterShellHookWindowProc)GetProcAddress(GetModuleHandle("USER32.DLL"), "RegisterShellHookWindow");
+	if (!_RegisterShellHookWindow)
+		die("Could not find RegisterShellHookWindow");
+	_RegisterShellHookWindow(dwmhwnd);
+	/* Grab a dynamic id for the SHELLHOOK message to be used later */
+	shellhookid = RegisterWindowMessage("SHELLHOOK");
 }
 
 duk_ret_t

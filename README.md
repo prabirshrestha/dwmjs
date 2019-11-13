@@ -23,6 +23,10 @@ dwmjs.addEventListener('load', function () {
     const windows = dwmjs.getAllWindows();
     alert(JSON.stringify(windows)); // [{ id: '....', { id: '...' } }]
 
+    dwmjs.addEventListener('windowcreated', function (e) {
+        const window = dwmjs.getWindowById(e.windowId);
+    });
+
     dwmjs.exit(0 /* status code */);
 });
 ```
