@@ -29,6 +29,14 @@ static void setupbar(HINSTANCE hInstance);
 static BOOL CALLBACK scan(HWND hwnd, LPARAM lParam);
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+typedef struct BarState {
+    HWND barhwnd;
+    duk_int32_t x;
+    duk_int32_t y;
+    duk_int32_t width;
+    duk_int32_t height;
+} BarState;
+
 static void
 die(const char *fmt, ...) {
     char buf[5000];
@@ -154,22 +162,28 @@ setup(HINSTANCE hInstance) {
 }
 
 LRESULT CALLBACK barhandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    BarState *barState = NULL;
     switch (msg) {
         case WM_CREATE:
-            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 100, 100, SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
+            CREATESTRUCT *CrtStrPtr = (CREATESTRUCT *)lParam;
+            barState = (BarState*) CrtStrPtr->lpCreateParams;
+            SetWindowPos(hwnd, HWND_TOPMOST, barState->x, barState->y, barState->width, barState->height, SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
             break;
         case WM_PAINT: {
+            CREATESTRUCT *CrtStrPtr = (CREATESTRUCT *)lParam;
+            barState = (BarState*) CrtStrPtr->lpCreateParams;
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
             RECT rc;
-            rc.top = 0;
-            rc.left = 0;
-            rc.bottom = 30;
-            rc.right = 100;
+            rc.top = barState->y;
+            rc.left = barState->x;
+            rc.bottom = barState->height;
+            rc.right = barState->width;
             HBRUSH greenBrush=CreateSolidBrush(RGB(0,255,0));
             FillRect(hdc, &rc, greenBrush);
             DeleteObject(greenBrush);
             EndPaint(hwnd, &ps);
+            free(CrtStrPtr);
             break;
         }
         case WM_LBUTTONDOWN:
@@ -382,6 +396,19 @@ jduk_exit(duk_context *ctx) {
 }
 
 duk_ret_t
+jduk_bar_finalizer(duk_context *ctx) {
+    duk_get_prop_string(ctx, -1, "barState");
+    BarState *barState = (BarState*)duk_to_pointer(ctx, -1);
+
+    if (barState) {
+        free(barState);
+        barState = NULL;
+    }
+
+    return 0;
+}
+
+duk_ret_t
 jduk_bar_ctor(duk_context *ctx) {
     if (!duk_is_constructor_call(ctx)) {
         return DUK_RET_TYPE_ERROR;
@@ -394,10 +421,11 @@ jduk_bar_ctor(duk_context *ctx) {
         return 0;
     }
 
-    duk_int32_t x = 0;
-    duk_int32_t y = 0;
-    duk_int32_t width = 100;
-    duk_int32_t height = 20;
+    BarState *barState = (BarState*)malloc(sizeof(BarState));
+    if (!barState) {
+        die("Failed to allocate memory to create barState");
+    }
+
     const char *font = "Consolas";
     const char *underlineColor = "#ffffff";
     duk_int32_t underlineWidth = 1;
@@ -406,25 +434,25 @@ jduk_bar_ctor(duk_context *ctx) {
 
     if (duk_has_prop_string(ctx, attributes_idx, "x")) {
         duk_get_prop_string(ctx, attributes_idx, "x");
-        x = duk_to_int32(ctx, -1);
+        barState->x = duk_to_int32(ctx, -1);
         duk_pop(ctx);
     }
 
     if (duk_has_prop_string(ctx, attributes_idx, "y")) {
         duk_get_prop_string(ctx, attributes_idx, "y");
-        y = duk_to_int32(ctx, -1);
+        barState->y = duk_to_int32(ctx, -1);
         duk_pop(ctx);
     }
 
     if (duk_has_prop_string(ctx, attributes_idx, "width")) {
         duk_get_prop_string(ctx, attributes_idx, "width");
-        width = duk_to_int32(ctx, -1);
+        barState->width = duk_to_int32(ctx, -1);
         duk_pop(ctx);
     }
 
     if (duk_has_prop_string(ctx, attributes_idx, "height")) {
         duk_get_prop_string(ctx, attributes_idx, "height");
-        height = duk_to_int32(ctx, -1);
+        barState->height = duk_to_int32(ctx, -1);
         duk_pop(ctx);
     }
 
@@ -468,19 +496,31 @@ jduk_bar_ctor(duk_context *ctx) {
 		NULL, /* parent window */
 		NULL, /* menu */
 		hinstance,
-		NULL /* lParam */
+		barState
 	);
 
     if (!barhwnd) {
+        free(barState);
         die("Failed to create bar");
     }
 
+    barState->barhwnd = barhwnd;
+
     duk_push_this(ctx);
+
+    duk_idx_t finalizer_obj_id = duk_push_object(ctx);
+    duk_push_pointer(ctx, barState);
+    duk_put_prop_string(ctx, finalizer_obj_id, "barState");
+
+    duk_push_c_function(ctx, jduk_bar_finalizer, 1);
+    duk_set_finalizer(ctx, -2);
 
     duk_push_int(ctx, (long)barhwnd);
     duk_put_prop_string(ctx, -2, DUK_HIDDEN_SYMBOL("id"));
 
-    PostMessage(barhwnd, WM_PAINT, 0, 0);
+    CREATESTRUCT *CrtStrPtr = malloc(sizeof(CREATESTRUCT));
+    CrtStrPtr->lpCreateParams = barState;
+    PostMessage(barhwnd, WM_PAINT, 0, CrtStrPtr);
 
     return 0;
 }
