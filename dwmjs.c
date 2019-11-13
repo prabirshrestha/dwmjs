@@ -321,6 +321,86 @@ jduk_exit(duk_context *ctx) {
     return 0;
 }
 
+duk_ret_t
+jduk_bar_ctor(duk_context *ctx) {
+    if (!duk_is_constructor_call(ctx)) {
+        return DUK_RET_TYPE_ERROR;
+    }
+
+    duk_idx_t attributes_idx = -1;
+    if (duk_is_null_or_undefined(ctx, attributes_idx) || !duk_is_object(ctx, attributes_idx)) {
+        MessageBox(NULL, "bar.ctor null", "dwmjs: Info", MB_OK);
+        duk_pop(ctx);
+        return 0;
+    }
+
+    duk_int32_t x = 0;
+    duk_int32_t y = 0;
+    duk_int32_t width = 100;
+    duk_int32_t height = 20;
+    const char *font = "Consolas";
+    const char *underlineColor = "#ffffff";
+    duk_int32_t underlineWidth = 1;
+    const char *backgroundColor = "#ffffff";
+    const char *foregroundColor = "#ffffff";
+
+    if (duk_has_prop_string(ctx, attributes_idx, "x")) {
+        duk_get_prop_string(ctx, attributes_idx, "x");
+        x = duk_to_int32(ctx, -1);
+        duk_pop(ctx);
+    }
+
+    if (duk_has_prop_string(ctx, attributes_idx, "y")) {
+        duk_get_prop_string(ctx, attributes_idx, "y");
+        y = duk_to_int32(ctx, -1);
+        duk_pop(ctx);
+    }
+
+    if (duk_has_prop_string(ctx, attributes_idx, "width")) {
+        duk_get_prop_string(ctx, attributes_idx, "width");
+        width = duk_to_int32(ctx, -1);
+        duk_pop(ctx);
+    }
+
+    if (duk_has_prop_string(ctx, attributes_idx, "height")) {
+        duk_get_prop_string(ctx, attributes_idx, "height");
+        height = duk_to_int32(ctx, -1);
+        duk_pop(ctx);
+    }
+
+    if (duk_has_prop_string(ctx, attributes_idx, "font")) {
+        duk_get_prop_string(ctx, attributes_idx, "font");
+        font = duk_to_string(ctx, -1);
+        duk_pop(ctx);
+    }
+
+    if (duk_has_prop_string(ctx, attributes_idx, "backgroundColor")) {
+        duk_get_prop_string(ctx, attributes_idx, "backgroundColor");
+        backgroundColor = duk_to_string(ctx, -1);
+        duk_pop(ctx);
+    }
+
+    if (duk_has_prop_string(ctx, attributes_idx, "foregroundColor")) {
+        duk_get_prop_string(ctx, attributes_idx, "foregroundColor");
+        foregroundColor = duk_to_string(ctx, -1);
+        duk_pop(ctx);
+    }
+
+    if (duk_has_prop_string(ctx, attributes_idx, "underlineColor")) {
+        duk_get_prop_string(ctx, attributes_idx, "underlineColor");
+        underlineColor = duk_to_string(ctx, -1);
+        duk_pop(ctx);
+    }
+
+    if (duk_has_prop_string(ctx, attributes_idx, "underlineWidth")) {
+        duk_get_prop_string(ctx, attributes_idx, "underlineWidth");
+        underlineWidth = duk_to_int32(ctx, -1);
+        duk_pop(ctx);
+    }
+
+    return 0;
+}
+
 #define EVENT_LISTENER_JS_CODE "(function(dwmjs) {"\
     "var listeners = {};"\
     "dwmjs.__onmessage = function (type, data) {"\
@@ -367,6 +447,9 @@ jduk_init_context(duk_context *ctx, void *udata) {
 
     duk_push_c_lightfunc(ctx, jduk_set_window_attributes, 2, 2, 0);
     duk_put_prop_string(ctx, dwmjs_obj_id, "setWindowAttributes");
+
+    duk_push_c_function(ctx, jduk_bar_ctor, 1); // var bar = new dwmjs.Bar();
+    duk_put_prop_string(ctx, dwmjs_obj_id, "Bar");
 
     duk_put_global_string(ctx, "dwmjs");
 
