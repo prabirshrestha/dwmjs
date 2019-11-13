@@ -55,9 +55,9 @@ LRESULT CALLBACK
 WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 	switch (msg) {
 		case WM_CREATE:
-            /* dwmjs.__onmessage('load') */
+            /* dwmjs.dispatchEvent('load') */
             duk_get_global_string(duk_ctx, "dwmjs");
-            duk_push_string(duk_ctx, "__onmessage");
+            duk_push_string(duk_ctx, "dispatchEvent");
             duk_push_string(duk_ctx, "load");
             duk_pcall_prop(duk_ctx, -3, 1);
             duk_pop_2(duk_ctx);
@@ -74,7 +74,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     case HSHELL_WINDOWCREATED:
                         duk_idx_t window_create_event_top = duk_get_top(duk_ctx);
                         duk_get_global_string(duk_ctx, "dwmjs");
-                        duk_push_string(duk_ctx, "__onmessage");
+                        duk_push_string(duk_ctx, "dispatchEvent");
                         duk_push_string(duk_ctx, "windowcreate");
                         duk_idx_t window_create_event_index = duk_push_object(duk_ctx);
                         duk_push_string(duk_ctx, "windowId");
@@ -87,7 +87,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     case HSHELL_WINDOWDESTROYED:
                         duk_idx_t window_close_event_top = duk_get_top(duk_ctx);
                         duk_get_global_string(duk_ctx, "dwmjs");
-                        duk_push_string(duk_ctx, "__onmessage");
+                        duk_push_string(duk_ctx, "dispatchEvent");
                         duk_push_string(duk_ctx, "windowclose");
                         duk_idx_t window_close_event_index = duk_push_object(duk_ctx);
                         duk_push_string(duk_ctx, "windowId");
@@ -100,7 +100,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                     case HSHELL_WINDOWACTIVATED:
                         duk_idx_t window_activate_event_top = duk_get_top(duk_ctx);
                         duk_get_global_string(duk_ctx, "dwmjs");
-                        duk_push_string(duk_ctx, "__onmessage");
+                        duk_push_string(duk_ctx, "dispatchEvent");
                         duk_push_string(duk_ctx, "windowfocusin");
                         duk_idx_t window_activate_event_index = duk_push_object(duk_ctx);
                         duk_push_string(duk_ctx, "windowId");
@@ -515,7 +515,7 @@ jduk_bar_set_attributes(duk_context *ctx) {
 
 #define EVENT_LISTENER_JS_CODE "(function(dwmjs) {"\
     "var listeners = {};"\
-    "dwmjs.__onmessage = function (type, data) {"\
+    "dwmjs.dispatchEvent = function (type, data) {"\
     "   var callbacks = listeners[type];"\
     "   if (callbacks) {"\
     "       for (var i = 0; i < callbacks.length; i++) {"\
