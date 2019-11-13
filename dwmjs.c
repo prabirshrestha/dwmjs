@@ -119,29 +119,9 @@ jduk_get_all_monitors(duk_context *ctx) {
             if (!EnumDisplaySettings(display_device.DeviceName, ENUM_CURRENT_SETTINGS, &devMode))
                 continue;
 
-            duk_idx_t device_obj_idx = duk_push_object(ctx);
-
-            duk_push_string(ctx, "id");
             duk_push_string(ctx, new_display_device.DeviceID);
-            duk_put_prop(ctx, device_obj_idx);
-
-            duk_push_string(ctx, "x");
-            duk_push_number(ctx, devMode.dmPosition.x);
-            duk_put_prop(ctx, device_obj_idx);
-
-            duk_push_string(ctx, "y");
-            duk_push_number(ctx, devMode.dmPosition.y);
-            duk_put_prop(ctx, device_obj_idx);
-
-            duk_push_string(ctx, "width");
-            duk_push_number(ctx, devMode.dmPelsWidth);
-            duk_put_prop(ctx, device_obj_idx);
-
-            duk_push_string(ctx, "height");
-            duk_push_number(ctx, devMode.dmPelsHeight);
-            duk_put_prop(ctx, device_obj_idx);
-
             duk_put_prop_index(ctx, monitors_array_idx, monitor_count);
+
             monitor_count++;
 
             monitorNum++;
@@ -162,16 +142,11 @@ BOOL CALLBACK
 scan(HWND hwnd, LPARAM lParam) {
     EnumWindowState *state;
     state = (EnumWindowState*)lParam;
-    duk_idx_t window_idx = duk_push_object(state->duk_ctx);
 
-    duk_push_string(state->duk_ctx, "id");
     duk_push_number(state->duk_ctx, (long)hwnd);
-    duk_put_prop(state->duk_ctx, window_idx);
-
     duk_put_prop_index(state->duk_ctx, state->windows_array_idx, state->count);
 
     state->count = state->count + 1;
-
     return TRUE;
 }
 
