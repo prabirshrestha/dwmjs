@@ -11,8 +11,8 @@
 #include <stdlib.h>
 #include "duktape.h"
 
-#define NAME					"dwmjs" 	/* Used for window name/class */
-#define BARNAME					"dwmjsbar" 	/* Used for window name/class */
+#define NAME                    "dwmjs"     /* Used for window name/class */
+#define BARNAME                 "dwmjsbar"  /* Used for window name/class */
 #define PATH_SEPERATOR          "\\"
 static HWND dwmhwnd;
 static HINSTANCE hinstance;
@@ -47,8 +47,8 @@ die(const char *fmt, ...) {
 
     MessageBox(NULL, buf, "Fatal error", MB_OK | MB_ICONERROR);
 
-	cleanup();
-	exit(EXIT_FAILURE);
+    cleanup();
+    exit(EXIT_FAILURE);
 }
 
 static void
@@ -61,21 +61,21 @@ cleanup() {
 
 LRESULT CALLBACK
 WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-	switch (msg) {
-		case WM_CREATE:
+    switch (msg) {
+        case WM_CREATE:
             /* dwmjs.dispatchEvent('load') */
             duk_get_global_string(duk_ctx, "dwmjs");
             duk_push_string(duk_ctx, "dispatchEvent");
             duk_push_string(duk_ctx, "load");
             duk_pcall_prop(duk_ctx, -3, 1);
             duk_pop_2(duk_ctx);
-			break;
+            break;
         case WM_CLOSE:
-			cleanup();
-			break;
-		case WM_DESTROY:
-			PostQuitMessage(0);
-			break;
+            cleanup();
+            break;
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            break;
         default:
             if (msg == shellhookid) { /* Handle the shell hook message */
                 switch (wParam & 0x7fff) {
@@ -131,34 +131,34 @@ static void
 setup(HINSTANCE hInstance) {
     WNDCLASSEX winClass;
 
-	winClass.cbSize = sizeof(WNDCLASSEX);
-	winClass.style = 0;
-	winClass.lpfnWndProc = (WNDPROC)WndProc;
-	winClass.cbClsExtra = 0;
-	winClass.cbWndExtra = 0;
-	winClass.hInstance = hInstance;
-	winClass.hIcon = NULL;
-	winClass.hIconSm = NULL;
-	winClass.hCursor = NULL;
-	winClass.hbrBackground = NULL;
-	winClass.lpszMenuName = NULL;
-	winClass.lpszClassName = NAME;
+    winClass.cbSize = sizeof(WNDCLASSEX);
+    winClass.style = 0;
+    winClass.lpfnWndProc = (WNDPROC)WndProc;
+    winClass.cbClsExtra = 0;
+    winClass.cbWndExtra = 0;
+    winClass.hInstance = hInstance;
+    winClass.hIcon = NULL;
+    winClass.hIconSm = NULL;
+    winClass.hCursor = NULL;
+    winClass.hbrBackground = NULL;
+    winClass.lpszMenuName = NULL;
+    winClass.lpszClassName = NAME;
 
-	if (!RegisterClassEx(&winClass))
-		die("Error registering dwmjs window class");
+    if (!RegisterClassEx(&winClass))
+        die("Error registering dwmjs window class");
 
-	dwmhwnd = CreateWindowEx(0, NAME, NAME, 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, hInstance, NULL);
+    dwmhwnd = CreateWindowEx(0, NAME, NAME, 0, 0, 0, 0, 0, HWND_MESSAGE, NULL, hInstance, NULL);
 
-	if (!dwmhwnd)
-		die("Error creating dwmjs window");
+    if (!dwmhwnd)
+        die("Error creating dwmjs window");
 
     /* Get function pointer for RegisterShellHookWindow */
-	_RegisterShellHookWindow = (RegisterShellHookWindowProc)GetProcAddress(GetModuleHandle("USER32.DLL"), "RegisterShellHookWindow");
-	if (!_RegisterShellHookWindow)
-		die("Could not find RegisterShellHookWindow");
-	_RegisterShellHookWindow(dwmhwnd);
-	/* Grab a dynamic id for the SHELLHOOK message to be used later */
-	shellhookid = RegisterWindowMessage("SHELLHOOK");
+    _RegisterShellHookWindow = (RegisterShellHookWindowProc)GetProcAddress(GetModuleHandle("USER32.DLL"), "RegisterShellHookWindow");
+    if (!_RegisterShellHookWindow)
+        die("Could not find RegisterShellHookWindow");
+    _RegisterShellHookWindow(dwmhwnd);
+    /* Grab a dynamic id for the SHELLHOOK message to be used later */
+    shellhookid = RegisterWindowMessage("SHELLHOOK");
 }
 
 LRESULT CALLBACK barhandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
@@ -197,7 +197,7 @@ LRESULT CALLBACK barhandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             return DefWindowProc(hwnd, msg, wParam, lParam);
     }
 
-	return 0;
+    return 0;
 }
 
 static int setupbarcomplete = 0;
@@ -205,21 +205,21 @@ static void
 setupbar(HINSTANCE hInstance) {
     if (setupbarcomplete) { return; }
     WNDCLASS winClass;
-	memset(&winClass, 0, sizeof winClass);
+    memset(&winClass, 0, sizeof winClass);
 
-	winClass.style = 0;
-	winClass.lpfnWndProc = barhandler;
-	winClass.cbClsExtra = 0;
-	winClass.cbWndExtra = 0;
-	winClass.hInstance = hInstance;
-	winClass.hIcon = NULL;
-	winClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-	winClass.hbrBackground = NULL;
-	winClass.lpszMenuName = NULL;
-	winClass.lpszClassName = BARNAME;
+    winClass.style = 0;
+    winClass.lpfnWndProc = barhandler;
+    winClass.cbClsExtra = 0;
+    winClass.cbWndExtra = 0;
+    winClass.hInstance = hInstance;
+    winClass.hIcon = NULL;
+    winClass.hCursor = LoadCursor(NULL, IDC_ARROW);
+    winClass.hbrBackground = NULL;
+    winClass.lpszMenuName = NULL;
+    winClass.lpszClassName = BARNAME;
 
-	if (!RegisterClass(&winClass))
-		die("Error registering dwmjs-bar window class");
+    if (!RegisterClass(&winClass))
+        die("Error registering dwmjs-bar window class");
 
     setupbarcomplete = 1;
 }
@@ -488,16 +488,16 @@ jduk_bar_ctor(duk_context *ctx) {
 
     setupbar(hinstance);
     HWND barhwnd = CreateWindowEx(
-		WS_EX_TOOLWINDOW,
-		BARNAME,
-		NULL, /* window title */
-		WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
-		0, 0, 0, 0,
-		NULL, /* parent window */
-		NULL, /* menu */
-		hinstance,
-		barState
-	);
+        WS_EX_TOOLWINDOW,
+        BARNAME,
+        NULL, /* window title */
+        WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
+        0, 0, 0, 0,
+        NULL, /* parent window */
+        NULL, /* menu */
+        hinstance,
+        barState
+    );
 
     if (!barhwnd) {
         free(barState);
