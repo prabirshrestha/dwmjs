@@ -42,6 +42,11 @@ dwmjs.addEventListener('load', function () {
         if (focused) { return; }
         focused = true;
         const window = dwmjs.getWindowById(e.windowId);
+        if (window.className == 'Vim') {
+            dwmjs.setWindowAttributes(window.id, {
+                showBroderBar: false
+            })
+        }
     });
 
     dwmjs.exit(0 /* status code */);

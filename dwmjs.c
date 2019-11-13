@@ -266,6 +266,40 @@ jduk_get_window_by_id(duk_context *ctx) {
     return 1;
 }
 
+void
+jduk_set_window_attributes_show_border_bar(duk_context *ctx, duk_idx_t attributes_idx, HWND hwnd) {
+    duk_get_prop_string(ctx, attributes_idx, "showBorderBar");
+    if (duk_to_boolean(ctx, -1)) {
+        SetWindowLong(hwnd, GWL_STYLE, (GetWindowLong(hwnd, GWL_STYLE) | (WS_CAPTION | WS_SIZEBOX)));
+    } else {
+        SetWindowLong(hwnd, GWL_STYLE, (GetWindowLong(hwnd, GWL_STYLE) & ~(WS_CAPTION | WS_SIZEBOX)) | WS_BORDER | WS_THICKFRAME);
+        SetWindowLong(hwnd, GWL_EXSTYLE, (GetWindowLong(hwnd, GWL_EXSTYLE) & ~(WS_EX_CLIENTEDGE | WS_EX_WINDOWEDGE)));
+    }
+    SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER);
+    duk_pop(ctx);
+}
+
+duk_ret_t
+jduk_set_window_attributes(duk_context *ctx) {
+    duk_idx_t window_id_idx = 0;
+    duk_int32_t window_id = duk_to_number(ctx, window_id_idx);
+    HWND hwnd = (HWND)(LONG_PTR)window_id;
+
+    duk_idx_t attributes_idx = -1;
+    if (duk_is_null_or_undefined(ctx, attributes_idx) || !duk_is_object(ctx, attributes_idx)) {
+        duk_pop(ctx);
+        return 0;
+    }
+
+    if (duk_has_prop_string(ctx, attributes_idx, "showBorderBar")) {
+        jduk_set_window_attributes_show_border_bar(ctx, attributes_idx, hwnd);
+    }
+
+    duk_pop(ctx);
+    duk_pop(ctx);
+    return 0;
+}
+
 duk_ret_t
 jduk_exit(duk_context *ctx) {
     duk_int32_t code = duk_to_int32(ctx, -1);
@@ -317,6 +351,9 @@ jduk_init_context(duk_context *ctx, void *udata) {
 
     duk_push_c_lightfunc(ctx, jduk_get_window_by_id, 1, 1, 0);
     duk_put_prop_string(ctx, dwmjs_obj_id, "getWindowById");
+
+    duk_push_c_lightfunc(ctx, jduk_set_window_attributes, 2, 2, 0);
+    duk_put_prop_string(ctx, dwmjs_obj_id, "setWindowAttributes");
 
     duk_put_global_string(ctx, "dwmjs");
 
