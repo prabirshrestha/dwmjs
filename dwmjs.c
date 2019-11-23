@@ -286,13 +286,48 @@ duk_ret_t
 jduk_get_monitor_by_id(duk_context *ctx) {
     const char *monitor_id = duk_to_string(ctx, -1);
 
-    duk_idx_t monitor_obj_idx = duk_push_object(ctx);
+    duk_idx_t monitor_count = 0;
+    DISPLAY_DEVICE display_device;
+    display_device.cb = sizeof(DISPLAY_DEVICE);
 
-    duk_push_string(ctx, "id");
-    duk_push_string(ctx, monitor_id);
-    duk_put_prop(ctx, monitor_obj_idx);
+    DWORD deviceNum = 0;
+    while (EnumDisplayDevices(NULL, deviceNum, &display_device, 0)) {
+        DISPLAY_DEVICE new_display_device = {0};
+        new_display_device.cb = sizeof(DISPLAY_DEVICE);
+        DWORD monitorNum = 0;
+        while (EnumDisplayDevices(display_device.DeviceName, monitorNum, &new_display_device, 0))
+        {
+            // Get the display mode settings of this device.
+            DEVMODE devMode;
+            if (!EnumDisplaySettings(display_device.DeviceName, ENUM_CURRENT_SETTINGS, &devMode))
+                continue;
 
-    return 1;
+            if (strcmp(new_display_device.DeviceID, monitor_id) == 0) {
+                duk_idx_t monitor_obj_idx = duk_push_object(ctx);
+
+                duk_push_string(ctx, "id");
+                duk_push_string(ctx, monitor_id);
+                duk_put_prop(ctx, monitor_obj_idx);
+
+                duk_push_string(ctx, "width");
+                duk_push_number(ctx, devMode.dmPelsWidth);
+                duk_put_prop(ctx, monitor_obj_idx);
+
+                duk_push_string(ctx, "height");
+                duk_push_number(ctx, devMode.dmPelsHeight);
+                duk_put_prop(ctx, monitor_obj_idx);
+
+                return 1;
+            }
+
+            monitor_count++;
+
+            monitorNum++;
+        }
+        deviceNum++;
+    }
+
+    return 0;
 }
 
 duk_ret_t
