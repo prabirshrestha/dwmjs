@@ -343,12 +343,14 @@ jduk_get_window_by_id(duk_context *ctx) {
 
 void
 jduk_set_window_attributes_is_broder_bar_visible(duk_context *ctx, duk_idx_t attributes_idx, HWND hwnd) {
-    duk_get_prop_string(ctx, attributes_idx, "isBorderBarVisible");
-    if (duk_to_boolean(ctx, -1)) {
-        SetWindowLong(hwnd, GWL_STYLE, (GetWindowLong(hwnd, GWL_STYLE) | (WS_CAPTION | WS_SIZEBOX)));
-    } else {
+    duk_get_prop_string(ctx, attributes_idx, "borderBarVisibility");
+    const char *borderBarVisibility = duk_to_string(ctx, -1);
+    duk_bool_t hidden = strcmp(borderBarVisibility, "hidden") == 0;
+    if (hidden) {
         SetWindowLong(hwnd, GWL_STYLE, (GetWindowLong(hwnd, GWL_STYLE) & ~(WS_CAPTION | WS_SIZEBOX)) | WS_BORDER | WS_THICKFRAME);
         SetWindowLong(hwnd, GWL_EXSTYLE, (GetWindowLong(hwnd, GWL_EXSTYLE) & ~(WS_EX_CLIENTEDGE | WS_EX_WINDOWEDGE)));
+    } else {
+        SetWindowLong(hwnd, GWL_STYLE, (GetWindowLong(hwnd, GWL_STYLE) | (WS_CAPTION | WS_SIZEBOX)));
     }
     SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER);
     duk_pop(ctx);
@@ -356,9 +358,10 @@ jduk_set_window_attributes_is_broder_bar_visible(duk_context *ctx, duk_idx_t att
 
 void
 jduk_set_window_attributes_is_visible(duk_context *ctx, duk_idx_t attributes_idx, HWND hwnd) {
-    duk_get_prop_string(ctx, attributes_idx, "isVisible");
-    duk_bool_t isvisible = duk_to_boolean(ctx, -1);
-    SetWindowPos(hwnd, 0, 0, 0, 0, 0, (isvisible ? SWP_SHOWWINDOW : SWP_HIDEWINDOW) | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
+    duk_get_prop_string(ctx, attributes_idx, "visibility");
+    const char *visibility = duk_to_string(ctx, -1);
+    duk_bool_t hidden = strcmp(visibility, "hidden") == 0;
+    SetWindowPos(hwnd, 0, 0, 0, 0, 0, (hidden ? SWP_HIDEWINDOW : SWP_SHOWWINDOW ) | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
     duk_pop(ctx);
 }
 
@@ -374,11 +377,11 @@ jduk_set_window_attributes(duk_context *ctx) {
         return 0;
     }
 
-    if (duk_has_prop_string(ctx, attributes_idx, "isBorderBarVisible")) {
+    if (duk_has_prop_string(ctx, attributes_idx, "borderBarVisibility")) {
         jduk_set_window_attributes_is_broder_bar_visible(ctx, attributes_idx, hwnd);
     }
 
-    if (duk_has_prop_string(ctx, attributes_idx, "isVisible")) {
+    if (duk_has_prop_string(ctx, attributes_idx, "visibility")) {
         jduk_set_window_attributes_is_visible(ctx, attributes_idx, hwnd);
     }
 

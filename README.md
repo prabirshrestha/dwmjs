@@ -44,8 +44,8 @@ dwmjs.addEventListener('load', function () {
         const window = dwmjs.getWindowById(e.windowId);
         if (window.className == 'Vim') {
             dwmjs.setWindowAttributes(window.id, {
-                isBorderBarVisible: false,
-                isVisible: true
+                borderBarVisibility: 'hidden', // 'hidden' | ''
+                visibility: 'hidden' // 'hidden' | ''
             })
         }
     });
