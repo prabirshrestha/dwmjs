@@ -283,6 +283,19 @@ scan(HWND hwnd, LPARAM lParam) {
 }
 
 duk_ret_t
+jduk_get_monitor_by_id(duk_context *ctx) {
+    const char *monitor_id = duk_to_string(ctx, -1);
+
+    duk_idx_t monitor_obj_idx = duk_push_object(ctx);
+
+    duk_push_string(ctx, "id");
+    duk_push_string(ctx, monitor_id);
+    duk_put_prop(ctx, monitor_obj_idx);
+
+    return 1;
+}
+
+duk_ret_t
 jduk_get_all_windows(duk_context *ctx) {
     EnumWindowState state;
     state.duk_ctx = ctx;
@@ -593,6 +606,9 @@ jduk_init_context(duk_context *ctx, void *udata) {
 
     duk_push_c_lightfunc(ctx, jduk_get_all_monitors, 0, 0, 0);
     duk_put_prop_string(ctx, dwmjs_obj_id, "getMonitors");
+
+    duk_push_c_lightfunc(ctx, jduk_get_monitor_by_id, 1, 1, 0);
+    duk_put_prop_string(ctx, dwmjs_obj_id, "getMonitorById");
 
     duk_push_c_lightfunc(ctx, jduk_get_all_windows, 0, 0, 0);
     duk_put_prop_string(ctx, dwmjs_obj_id, "getWindows");
