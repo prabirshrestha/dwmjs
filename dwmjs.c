@@ -401,10 +401,11 @@ jduk_get_window_by_id(duk_context *ctx) {
     duk_put_prop(ctx, window_obj_idx);
 
     ZeroMemory(buf, MAX_PATH);
-    GetClassName(hwnd, buf, sizeof buf);
-    duk_push_string(ctx, "className");
-    duk_push_string(ctx, buf);
-    duk_put_prop(ctx, window_obj_idx);
+    if (GetClassName(hwnd, buf, sizeof buf)) {
+        duk_push_string(ctx, "className");
+        duk_push_string(ctx, buf);
+        duk_put_prop(ctx, window_obj_idx);
+    }
 
     ZeroMemory(buf, MAX_PATH);
     GetWindowText(hwnd, buf, sizeof buf);
