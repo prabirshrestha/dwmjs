@@ -24,6 +24,9 @@ dwmjs.addEventListener('load', function () {
     const windows = dwmjs.getWindows();
     alert(JSON.stringify(windows)); // [123,234]
 
+    const taskBar = dwmjs.getTaskbar();
+    alert(JSON.stringify(taskbar);
+
     var created = false;
     dwmjs.addEventListener('windowcreate', function (e) {
         if (created) { return; }

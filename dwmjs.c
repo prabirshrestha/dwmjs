@@ -439,6 +439,58 @@ jduk_set_window_attributes(duk_context *ctx) {
 }
 
 duk_ret_t
+jduk_get_taskbar(duk_context *ctx) {
+    duk_idx_t taskbar_obj_idx = duk_push_object(ctx);
+
+    HWND hwnd = FindWindow("Shell_TrayWnd", NULL);
+    TCHAR buf[500];
+    RECT rect;
+
+    duk_push_string(ctx, "id");
+    duk_push_number(ctx, (long)hwnd);
+    duk_put_prop(ctx, taskbar_obj_idx);
+
+    duk_push_string(ctx, "visibility");
+    duk_push_string(ctx, IsWindowVisible(hwnd) > 0 ? "" : "hidden");
+    duk_put_prop(ctx, taskbar_obj_idx);
+
+    ZeroMemory(buf, 500);
+    GetClassName(hwnd, buf, sizeof buf);
+    duk_push_string(ctx, "className");
+    duk_push_string(ctx, buf);
+    duk_put_prop(ctx, taskbar_obj_idx);
+
+    ZeroMemory(buf, 500);
+    GetWindowText(hwnd, buf, sizeof buf);
+    duk_push_string(ctx, "title");
+    duk_push_string(ctx, buf);
+    duk_put_prop(ctx, taskbar_obj_idx);
+
+    if(GetWindowRect(hwnd, &rect))
+    {
+        duk_push_string(ctx, "x");
+        duk_push_number(ctx, rect.left);
+        duk_put_prop(ctx, taskbar_obj_idx);
+
+        duk_push_string(ctx, "y");
+        duk_push_number(ctx, rect.top);
+        duk_put_prop(ctx, taskbar_obj_idx);
+
+        int width = rect.right - rect.left;
+        duk_push_string(ctx, "width");
+        duk_push_number(ctx, width);
+        duk_put_prop(ctx, taskbar_obj_idx);
+
+        int height = rect.bottom - rect.top;
+        duk_push_string(ctx, "height");
+        duk_push_number(ctx, height);
+        duk_put_prop(ctx, taskbar_obj_idx);
+    }
+
+    return 1;
+}
+
+duk_ret_t
 jduk_exit(duk_context *ctx) {
     duk_int32_t code = duk_to_int32(ctx, -1);
     cleanup();
@@ -653,6 +705,9 @@ jduk_init_context(duk_context *ctx, void *udata) {
 
     duk_push_c_lightfunc(ctx, jduk_set_window_attributes, 2, 2, 0);
     duk_put_prop_string(ctx, dwmjs_obj_id, "setWindowAttributes");
+
+    duk_push_c_lightfunc(ctx, jduk_get_taskbar, 0, 0, 0);
+    duk_put_prop_string(ctx, dwmjs_obj_id, "getTaskbar");
 
     duk_push_c_function(ctx, jduk_bar_ctor, 1); // var bar = new dwmjs.Bar();
     duk_push_object(ctx); // [Bar proto]
