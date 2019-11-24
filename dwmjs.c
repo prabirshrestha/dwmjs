@@ -349,6 +349,7 @@ jduk_get_window_by_id(duk_context *ctx) {
     HWND hwnd = (HWND)(LONG_PTR)window_id;
     RECT rect;
     WINDOWINFO window_info = { .cbSize = sizeof window_info };
+    DWORD buf_size = MAX_PATH;
     TCHAR buf[MAX_PATH];
 
     duk_idx_t window_obj_idx = duk_push_object(ctx);
@@ -388,11 +389,9 @@ jduk_get_window_by_id(duk_context *ctx) {
 
     HANDLE hProc = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, dwProcessID);    
     if (hProc) {
-        DWORD path_buffer_size = MAX_PATH;
-        char path_buffer[MAX_PATH];
-        if (QueryFullProcessImageName(hProc, 0, path_buffer, &path_buffer_size)) {
+        if (QueryFullProcessImageName(hProc, 0, buf, &buf_size)) {
             duk_push_string(ctx, "path");
-            duk_push_string(ctx, path_buffer);
+            duk_push_string(ctx, buf);
             duk_put_prop(ctx, window_obj_idx);
         }
     }
@@ -422,29 +421,36 @@ jduk_get_window_by_id(duk_context *ctx) {
         duk_push_number(ctx, (window_info.dwStyle & WS_MINIMIZEBOX) > 0);
         duk_put_prop(ctx, window_obj_idx);
 
-        duk_push_string(ctx, "isPopup");
-        duk_push_number(ctx, (window_info.dwStyle & WS_POPUP) > 0);
+        duk_push_string(ctx, "isActive");
+        duk_push_boolean(ctx, window_info.dwWindowStatus > 0);
         duk_put_prop(ctx, window_obj_idx);
-    }
 
-    if(GetWindowRect(hwnd, &rect))
-    {
+        duk_push_string(ctx, "isPopup");
+        duk_push_boolean(ctx, (window_info.dwStyle & WS_POPUP) > 0);
+        duk_put_prop(ctx, window_obj_idx);
+
+        duk_push_string(ctx, "borderWidth");
+        duk_push_number(ctx, window_info.cxWindowBorders);
+        duk_put_prop(ctx, window_obj_idx);
+
+        duk_push_string(ctx, "borderHeight");
+        duk_push_number(ctx, window_info.cyWindowBorders);
+        duk_put_prop(ctx, window_obj_idx);
+
         duk_push_string(ctx, "x");
-        duk_push_number(ctx, rect.left);
+        duk_push_number(ctx, window_info.rcWindow.left);
         duk_put_prop(ctx, window_obj_idx);
 
         duk_push_string(ctx, "y");
-        duk_push_number(ctx, rect.top);
+        duk_push_number(ctx, window_info.rcWindow.top);
         duk_put_prop(ctx, window_obj_idx);
 
-        int width = rect.right - rect.left;
         duk_push_string(ctx, "width");
-        duk_push_number(ctx, width);
+        duk_push_number(ctx, window_info.rcWindow.right - window_info.rcWindow.left);
         duk_put_prop(ctx, window_obj_idx);
 
-        int height = rect.bottom - rect.top;
         duk_push_string(ctx, "height");
-        duk_push_number(ctx, height);
+        duk_push_number(ctx, window_info.rcWindow.bottom - window_info.rcWindow.top);
         duk_put_prop(ctx, window_obj_idx);
     }
 
