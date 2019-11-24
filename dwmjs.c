@@ -116,6 +116,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                         duk_put_prop(duk_ctx, window_activate_event_index);
 
                         duk_pcall_prop(duk_ctx, window_activate_event_top, 2);
+
                         duk_pop(duk_ctx); /* result */
                         break;
                 }
@@ -346,6 +347,7 @@ duk_ret_t
 jduk_get_window_by_id(duk_context *ctx) {
     duk_int32_t window_id = duk_to_number(ctx, -1);
     HWND hwnd = (HWND)(LONG_PTR)window_id;
+    RECT rect;
     TCHAR buf[500];
 
     duk_idx_t window_obj_idx = duk_push_object(ctx);
@@ -359,10 +361,6 @@ jduk_get_window_by_id(duk_context *ctx) {
     duk_push_number(ctx, (long)parent);
     duk_put_prop(ctx, window_obj_idx);
 
-    duk_push_string(ctx, "hasParent");
-    duk_push_boolean(ctx, parent != NULL);
-    duk_put_prop(ctx, window_obj_idx);
-
     int exstyle = GetWindowLong(hwnd, GWL_EXSTYLE);
 
     int istooltip = exstyle & WS_EX_TOOLWINDOW;
@@ -370,8 +368,8 @@ jduk_get_window_by_id(duk_context *ctx) {
     duk_push_boolean(ctx, istooltip > 0);
     duk_put_prop(ctx, window_obj_idx);
 
-    duk_push_string(ctx, "isVisible");
-    duk_push_boolean(ctx, IsWindowVisible(hwnd) > 0);
+    duk_push_string(ctx, "visibility");
+    duk_push_string(ctx, IsWindowVisible(hwnd) > 0 ? "visible" : "hidden");
     duk_put_prop(ctx, window_obj_idx);
 
     ZeroMemory(buf, 500);
@@ -386,11 +384,32 @@ jduk_get_window_by_id(duk_context *ctx) {
     duk_push_string(ctx, buf);
     duk_put_prop(ctx, window_obj_idx);
 
+    if(GetWindowRect(hwnd, &rect))
+    {
+        duk_push_string(ctx, "x");
+        duk_push_number(ctx, rect.left);
+        duk_put_prop(ctx, window_obj_idx);
+
+        duk_push_string(ctx, "y");
+        duk_push_number(ctx, rect.top);
+        duk_put_prop(ctx, window_obj_idx);
+
+        int width = rect.right - rect.left;
+        duk_push_string(ctx, "width");
+        duk_push_number(ctx, width);
+        duk_put_prop(ctx, window_obj_idx);
+
+        int height = rect.bottom - rect.top;
+        duk_push_string(ctx, "height");
+        duk_push_number(ctx, height);
+        duk_put_prop(ctx, window_obj_idx);
+    }
+
     return 1;
 }
 
 void
-jduk_set_window_attributes_is_broder_bar_visible(duk_context *ctx, duk_idx_t attributes_idx, HWND hwnd) {
+jduk_set_window_attributes_border_bar_visibility(duk_context *ctx, duk_idx_t attributes_idx, HWND hwnd) {
     duk_get_prop_string(ctx, attributes_idx, "borderBarVisibility");
     const char *borderBarVisibility = duk_to_string(ctx, -1);
     duk_bool_t hidden = strcmp(borderBarVisibility, "hidden") == 0;
@@ -405,7 +424,7 @@ jduk_set_window_attributes_is_broder_bar_visible(duk_context *ctx, duk_idx_t att
 }
 
 void
-jduk_set_window_attributes_is_visible(duk_context *ctx, duk_idx_t attributes_idx, HWND hwnd) {
+jduk_set_window_attributes_visibility(duk_context *ctx, duk_idx_t attributes_idx, HWND hwnd) {
     duk_get_prop_string(ctx, attributes_idx, "visibility");
     const char *visibility = duk_to_string(ctx, -1);
     duk_bool_t hidden = strcmp(visibility, "hidden") == 0;
@@ -426,11 +445,11 @@ jduk_set_window_attributes(duk_context *ctx) {
     }
 
     if (duk_has_prop_string(ctx, attributes_idx, "borderBarVisibility")) {
-        jduk_set_window_attributes_is_broder_bar_visible(ctx, attributes_idx, hwnd);
+        jduk_set_window_attributes_border_bar_visibility(ctx, attributes_idx, hwnd);
     }
 
     if (duk_has_prop_string(ctx, attributes_idx, "visibility")) {
-        jduk_set_window_attributes_is_visible(ctx, attributes_idx, hwnd);
+        jduk_set_window_attributes_visibility(ctx, attributes_idx, hwnd);
     }
 
     duk_pop(ctx);
@@ -439,8 +458,8 @@ jduk_set_window_attributes(duk_context *ctx) {
 }
 
 duk_ret_t
-jduk_get_taskbar(duk_context *ctx) {
-    duk_idx_t taskbar_obj_idx = duk_push_object(ctx);
+jduk_get_task_bar(duk_context *ctx) {
+    duk_idx_t task_bar_obj_idx = duk_push_object(ctx);
 
     HWND hwnd = FindWindow("Shell_TrayWnd", NULL);
     TCHAR buf[500];
@@ -448,46 +467,76 @@ jduk_get_taskbar(duk_context *ctx) {
 
     duk_push_string(ctx, "id");
     duk_push_number(ctx, (long)hwnd);
-    duk_put_prop(ctx, taskbar_obj_idx);
+    duk_put_prop(ctx, task_bar_obj_idx);
 
     duk_push_string(ctx, "visibility");
-    duk_push_string(ctx, IsWindowVisible(hwnd) > 0 ? "" : "hidden");
-    duk_put_prop(ctx, taskbar_obj_idx);
+    duk_push_string(ctx, IsWindowVisible(hwnd) > 0 ? "visible" : "hidden");
+    duk_put_prop(ctx, task_bar_obj_idx);
 
     ZeroMemory(buf, 500);
     GetClassName(hwnd, buf, sizeof buf);
     duk_push_string(ctx, "className");
     duk_push_string(ctx, buf);
-    duk_put_prop(ctx, taskbar_obj_idx);
+    duk_put_prop(ctx, task_bar_obj_idx);
 
     ZeroMemory(buf, 500);
     GetWindowText(hwnd, buf, sizeof buf);
     duk_push_string(ctx, "title");
     duk_push_string(ctx, buf);
-    duk_put_prop(ctx, taskbar_obj_idx);
+    duk_put_prop(ctx, task_bar_obj_idx);
 
     if(GetWindowRect(hwnd, &rect))
     {
         duk_push_string(ctx, "x");
         duk_push_number(ctx, rect.left);
-        duk_put_prop(ctx, taskbar_obj_idx);
+        duk_put_prop(ctx, task_bar_obj_idx);
 
         duk_push_string(ctx, "y");
         duk_push_number(ctx, rect.top);
-        duk_put_prop(ctx, taskbar_obj_idx);
+        duk_put_prop(ctx, task_bar_obj_idx);
 
         int width = rect.right - rect.left;
         duk_push_string(ctx, "width");
         duk_push_number(ctx, width);
-        duk_put_prop(ctx, taskbar_obj_idx);
+        duk_put_prop(ctx, task_bar_obj_idx);
 
         int height = rect.bottom - rect.top;
         duk_push_string(ctx, "height");
         duk_push_number(ctx, height);
-        duk_put_prop(ctx, taskbar_obj_idx);
+        duk_put_prop(ctx, task_bar_obj_idx);
     }
 
     return 1;
+}
+
+void
+jduk_set_task_bar_attributes_visibility(duk_context *ctx, duk_idx_t attributes_idx, HWND hwnd) {
+    duk_get_prop_string(ctx, attributes_idx, "visibility");
+    const char *visibility = duk_to_string(ctx, -1);
+    duk_bool_t hidden = strcmp(visibility, "hidden") == 0;
+    SetWindowPos(hwnd, 0, 0, 0, 0, 0, (hidden ? SWP_HIDEWINDOW : SWP_SHOWWINDOW ) | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
+    duk_pop(ctx);
+}
+
+duk_ret_t
+jduk_set_task_bar_attributes(duk_context *ctx) {
+    duk_idx_t window_id_idx = 0;
+    duk_int32_t window_id = duk_to_number(ctx, window_id_idx);
+    HWND hwnd = (HWND)(LONG_PTR)window_id;
+
+    duk_idx_t attributes_idx = -1;
+    if (duk_is_null_or_undefined(ctx, attributes_idx) || !duk_is_object(ctx, attributes_idx)) {
+        duk_pop(ctx);
+        return 0;
+    }
+
+    if (duk_has_prop_string(ctx, attributes_idx, "visibility")) {
+        jduk_set_task_bar_attributes_visibility(ctx, attributes_idx, hwnd);
+    }
+
+    duk_pop(ctx);
+    duk_pop(ctx);
+    return 0;
 }
 
 duk_ret_t
@@ -706,8 +755,11 @@ jduk_init_context(duk_context *ctx, void *udata) {
     duk_push_c_lightfunc(ctx, jduk_set_window_attributes, 2, 2, 0);
     duk_put_prop_string(ctx, dwmjs_obj_id, "setWindowAttributes");
 
-    duk_push_c_lightfunc(ctx, jduk_get_taskbar, 0, 0, 0);
-    duk_put_prop_string(ctx, dwmjs_obj_id, "getTaskbar");
+    duk_push_c_lightfunc(ctx, jduk_get_task_bar, 0, 0, 0);
+    duk_put_prop_string(ctx, dwmjs_obj_id, "getTaskBar");
+
+    duk_push_c_lightfunc(ctx, jduk_set_task_bar_attributes, 2, 2, 0);
+    duk_put_prop_string(ctx, dwmjs_obj_id, "setTaskBarAttributes");
 
     duk_push_c_function(ctx, jduk_bar_ctor, 1); // var bar = new dwmjs.Bar();
     duk_push_object(ctx); // [Bar proto]

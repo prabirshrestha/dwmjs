@@ -24,8 +24,10 @@ dwmjs.addEventListener('load', function () {
     const windows = dwmjs.getWindows();
     alert(JSON.stringify(windows)); // [123,234]
 
-    const taskBar = dwmjs.getTaskbar();
-    alert(JSON.stringify(taskbar);
+    const taskBar = dwmjs.getTaskBar();
+    dwmjs.setTaskBarAttributes({
+        visibility: 'hidden', // 'hidden' | 'visible'
+    })
 
     var created = false;
     dwmjs.addEventListener('windowcreate', function (e) {
@@ -48,8 +50,8 @@ dwmjs.addEventListener('load', function () {
         const window = dwmjs.getWindowById(e.windowId);
         if (window.className == 'Vim') {
             dwmjs.setWindowAttributes(window.id, {
-                borderBarVisibility: 'hidden', // 'hidden' | ''
-                visibility: 'hidden' // 'hidden' | ''
+                borderBarVisibility: 'hidden', // 'hidden' | 'visible'
+                visibility: 'hidden' // 'hidden' | 'visible'
             })
         }
     });
