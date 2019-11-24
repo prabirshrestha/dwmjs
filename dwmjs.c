@@ -1,5 +1,5 @@
 #define WIN32_LEAN_AND_MEAN
-#define _WIN32_WINNT 0x0500
+#define _WIN32_WINNT 0x0600
 
 #if _MSC_VER
 #pragma comment(lib,"user32.lib")
@@ -349,7 +349,7 @@ jduk_get_window_by_id(duk_context *ctx) {
     HWND hwnd = (HWND)(LONG_PTR)window_id;
     RECT rect;
     WINDOWINFO window_info = { .cbSize = sizeof window_info };
-    TCHAR buf[500];
+    TCHAR buf[MAX_PATH];
 
     duk_idx_t window_obj_idx = duk_push_object(ctx);
 
@@ -386,17 +386,28 @@ jduk_get_window_by_id(duk_context *ctx) {
     duk_push_number(ctx, dwProcessID);
     duk_put_prop(ctx, window_obj_idx);
 
+    HANDLE hProc = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, dwProcessID);    
+    if (hProc) {
+        DWORD path_buffer_size = MAX_PATH;
+        char path_buffer[MAX_PATH];
+        if (QueryFullProcessImageName(hProc, 0, path_buffer, &path_buffer_size)) {
+            duk_push_string(ctx, "path");
+            duk_push_string(ctx, path_buffer);
+            duk_put_prop(ctx, window_obj_idx);
+        }
+    }
+
     duk_push_string(ctx, "visibility");
     duk_push_string(ctx, IsWindowVisible(hwnd) > 0 ? "visible" : "hidden");
     duk_put_prop(ctx, window_obj_idx);
 
-    ZeroMemory(buf, 500);
+    ZeroMemory(buf, MAX_PATH);
     GetClassName(hwnd, buf, sizeof buf);
     duk_push_string(ctx, "className");
     duk_push_string(ctx, buf);
     duk_put_prop(ctx, window_obj_idx);
 
-    ZeroMemory(buf, 500);
+    ZeroMemory(buf, MAX_PATH);
     GetWindowText(hwnd, buf, sizeof buf);
     duk_push_string(ctx, "title");
     duk_push_string(ctx, buf);
