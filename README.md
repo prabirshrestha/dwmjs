@@ -34,6 +34,7 @@ dwmjs.addEventListener('load', function () {
         if (created) { return; }
         created = true;
         const window = dwmjs.getWindowById(e.windowId);
+        dwmjs.closeWindow(e.windowId);
     });
 
     var closed = false;

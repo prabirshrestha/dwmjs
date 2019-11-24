@@ -348,6 +348,7 @@ jduk_get_window_by_id(duk_context *ctx) {
     duk_int32_t window_id = duk_to_number(ctx, -1);
     HWND hwnd = (HWND)(LONG_PTR)window_id;
     RECT rect;
+    WINDOWINFO window_info = { .cbSize = sizeof window_info };
     TCHAR buf[500];
 
     duk_idx_t window_obj_idx = duk_push_object(ctx);
@@ -363,9 +364,26 @@ jduk_get_window_by_id(duk_context *ctx) {
 
     int exstyle = GetWindowLong(hwnd, GWL_EXSTYLE);
 
-    int istooltip = exstyle & WS_EX_TOOLWINDOW;
-    duk_push_string(ctx, "isTooltip");
-    duk_push_boolean(ctx, istooltip > 0);
+    duk_push_string(ctx, "isTopMost");
+    duk_push_boolean(ctx, (exstyle & WS_EX_TOPMOST) > 0);
+    duk_put_prop(ctx, window_obj_idx);
+
+    duk_push_string(ctx, "isToolWindow");
+    duk_push_boolean(ctx, (exstyle & WS_EX_TOOLWINDOW) > 0);
+    duk_put_prop(ctx, window_obj_idx);
+
+    duk_push_string(ctx, "isAppWindow");
+    duk_push_boolean(ctx, (exstyle & WS_EX_APPWINDOW) > 0);
+    duk_put_prop(ctx, window_obj_idx);
+
+    duk_push_string(ctx, "isClientEdge");
+    duk_push_boolean(ctx, (exstyle & WS_EX_CLIENTEDGE) > 0);
+    duk_put_prop(ctx, window_obj_idx);
+
+    duk_push_string(ctx, "processId");
+    DWORD dwProcessID = 0;
+    GetWindowThreadProcessId(hwnd, &dwProcessID);
+    duk_push_number(ctx, dwProcessID);
     duk_put_prop(ctx, window_obj_idx);
 
     duk_push_string(ctx, "visibility");
@@ -383,6 +401,20 @@ jduk_get_window_by_id(duk_context *ctx) {
     duk_push_string(ctx, "title");
     duk_push_string(ctx, buf);
     duk_put_prop(ctx, window_obj_idx);
+
+    if (GetWindowInfo(hwnd, &window_info)) {
+        duk_push_string(ctx, "canMaximize");
+        duk_push_number(ctx, (window_info.dwStyle & WS_MAXIMIZEBOX) > 0);
+        duk_put_prop(ctx, window_obj_idx);
+
+        duk_push_string(ctx, "canMinimize");
+        duk_push_number(ctx, (window_info.dwStyle & WS_MINIMIZEBOX) > 0);
+        duk_put_prop(ctx, window_obj_idx);
+
+        duk_push_string(ctx, "isPopup");
+        duk_push_number(ctx, (window_info.dwStyle & WS_POPUP) > 0);
+        duk_put_prop(ctx, window_obj_idx);
+    }
 
     if(GetWindowRect(hwnd, &rect))
     {
@@ -453,6 +485,18 @@ jduk_set_window_attributes(duk_context *ctx) {
     }
 
     duk_pop(ctx);
+    duk_pop(ctx);
+    return 0;
+}
+
+duk_ret_t
+jduk_close_window(duk_context *ctx) {
+    duk_idx_t window_id_idx = 0;
+    duk_int32_t window_id = duk_to_number(ctx, window_id_idx);
+    HWND hwnd = (HWND)(LONG_PTR)window_id;
+
+    PostMessage(hwnd, WM_CLOSE, 0, 0);
+
     duk_pop(ctx);
     return 0;
 }
@@ -754,6 +798,9 @@ jduk_init_context(duk_context *ctx, void *udata) {
 
     duk_push_c_lightfunc(ctx, jduk_set_window_attributes, 2, 2, 0);
     duk_put_prop_string(ctx, dwmjs_obj_id, "setWindowAttributes");
+
+    duk_push_c_lightfunc(ctx, jduk_close_window, 1, 1, 0);
+    duk_put_prop_string(ctx, dwmjs_obj_id, "closeWindow");
 
     duk_push_c_lightfunc(ctx, jduk_get_task_bar, 0, 0, 0);
     duk_put_prop_string(ctx, dwmjs_obj_id, "getTaskBar");
