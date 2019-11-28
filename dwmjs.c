@@ -296,6 +296,10 @@ jduk_get_monitor_by_id(duk_context *ctx) {
     duk_push_number(ctx, monitor_id);
     duk_put_prop(ctx, monitor_obj_idx);
 
+    duk_push_string(ctx, "name");
+    duk_push_string(ctx, iMonitor.szDevice);
+    duk_put_prop(ctx, monitor_obj_idx);
+
     duk_push_string(ctx, "x");
     duk_push_number(ctx, iMonitor.rcMonitor.left);
     duk_put_prop(ctx, monitor_obj_idx);
