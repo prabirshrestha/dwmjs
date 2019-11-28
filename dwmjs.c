@@ -53,6 +53,17 @@ die(const char *fmt, ...) {
 }
 
 static void
+logd(const char *fmt, ...) {
+    char buf[5000];
+    va_list args;
+    va_start(args, fmt);
+    vsprintf_s(buf, 5000, fmt, args);
+    va_end(args);
+
+    MessageBox(NULL, buf, "Log", MB_OK);
+}
+
+static void
 cleanup() {
     if (duk_ctx) {
         duk_destroy_heap(duk_ctx);
@@ -619,10 +630,6 @@ jduk_bar_set_attributes(duk_context *ctx) {
         duk_pop(ctx);
     }
 
-    /* char buffer[10]; */
-    /* snprintf(buffer, 10, "w%d", width); */
-    /* MessageBox(NULL, buffer, "Fatal error", MB_OK); */
-
     duk_push_this(ctx);
 
     duk_get_prop_string(ctx, -1, DUK_HIDDEN_SYMBOL("id"));
@@ -644,7 +651,7 @@ jduk_bar_set_attributes(duk_context *ctx) {
     duk_pop(ctx);
 
     duk_bool_t hidden = strcmp(visibility, "hidden") == 0;
-    SetWindowPos(barhwnd, HWND_TOPMOST, x, y, width, height, (hidden ? SWP_HIDEWINDOW : SWP_SHOWWINDOW) | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
+    SetWindowPos(barhwnd, HWND_TOPMOST, x, y, width + x, height + y, (hidden ? SWP_HIDEWINDOW : SWP_SHOWWINDOW) | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
 
     CREATESTRUCT *CrtStrPtr = malloc(sizeof(CREATESTRUCT));
     CrtStrPtr->lpCreateParams = barState;
