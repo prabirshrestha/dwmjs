@@ -168,7 +168,7 @@ LRESULT CALLBACK barhandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_CREATE:
             CREATESTRUCT *CrtStrPtr = (CREATESTRUCT *)lParam;
             barState = (BarState*) CrtStrPtr->lpCreateParams;
-            SetWindowPos(hwnd, HWND_TOPMOST, barState->x, barState->y, barState->width, barState->height, SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
+            SetWindowPos(hwnd, HWND_TOPMOST, barState->x, barState->y, barState->x + barState->width, barState->y + barState->height, SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
             break;
         case WM_PAINT: {
             CREATESTRUCT *CrtStrPtr = (CREATESTRUCT *)lParam;
@@ -178,8 +178,8 @@ LRESULT CALLBACK barhandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             RECT rc;
             rc.top = barState->y;
             rc.left = barState->x;
-            rc.bottom = barState->height;
-            rc.right = barState->width;
+            rc.bottom = barState->height + barState->y;
+            rc.right = barState->width + barState->x;
             HBRUSH greenBrush=CreateSolidBrush(RGB(0,255,0));
             FillRect(hdc, &rc, greenBrush);
             DeleteObject(greenBrush);
@@ -302,6 +302,8 @@ jduk_get_monitor_by_id(duk_context *ctx) {
             if (!EnumDisplaySettings(display_device.DeviceName, ENUM_CURRENT_SETTINGS, &devMode))
                 continue;
 
+            /* GetMonitorInfoA(new_display_device.DeviceString, &target); */
+
             if (strcmp(new_display_device.DeviceID, monitor_id) == 0) {
                 duk_idx_t monitor_obj_idx = duk_push_object(ctx);
 
@@ -311,10 +313,12 @@ jduk_get_monitor_by_id(duk_context *ctx) {
 
                 duk_push_string(ctx, "width");
                 duk_push_number(ctx, devMode.dmPelsWidth);
+                /* duk_push_number(ctx, GetSystemMetrics(SM_CXVIRTUALSCREEN)); */
                 duk_put_prop(ctx, monitor_obj_idx);
 
                 duk_push_string(ctx, "height");
                 duk_push_number(ctx, devMode.dmPelsHeight);
+                /* duk_push_number(ctx, GetSystemMetrics(SM_CYVIRTUALSCREEN)); */
                 duk_put_prop(ctx, monitor_obj_idx);
 
                 return 1;
@@ -518,88 +522,6 @@ jduk_close_window(duk_context *ctx) {
 }
 
 duk_ret_t
-jduk_get_task_bar(duk_context *ctx) {
-    duk_idx_t task_bar_obj_idx = duk_push_object(ctx);
-
-    HWND hwnd = FindWindow("Shell_TrayWnd", NULL);
-    TCHAR buf[500];
-    RECT rect;
-
-    duk_push_string(ctx, "id");
-    duk_push_number(ctx, (long)hwnd);
-    duk_put_prop(ctx, task_bar_obj_idx);
-
-    duk_push_string(ctx, "visibility");
-    duk_push_string(ctx, IsWindowVisible(hwnd) > 0 ? "visible" : "hidden");
-    duk_put_prop(ctx, task_bar_obj_idx);
-
-    ZeroMemory(buf, 500);
-    GetClassName(hwnd, buf, sizeof buf);
-    duk_push_string(ctx, "className");
-    duk_push_string(ctx, buf);
-    duk_put_prop(ctx, task_bar_obj_idx);
-
-    ZeroMemory(buf, 500);
-    GetWindowText(hwnd, buf, sizeof buf);
-    duk_push_string(ctx, "title");
-    duk_push_string(ctx, buf);
-    duk_put_prop(ctx, task_bar_obj_idx);
-
-    if(GetWindowRect(hwnd, &rect))
-    {
-        duk_push_string(ctx, "x");
-        duk_push_number(ctx, rect.left);
-        duk_put_prop(ctx, task_bar_obj_idx);
-
-        duk_push_string(ctx, "y");
-        duk_push_number(ctx, rect.top);
-        duk_put_prop(ctx, task_bar_obj_idx);
-
-        int width = rect.right - rect.left;
-        duk_push_string(ctx, "width");
-        duk_push_number(ctx, width);
-        duk_put_prop(ctx, task_bar_obj_idx);
-
-        int height = rect.bottom - rect.top;
-        duk_push_string(ctx, "height");
-        duk_push_number(ctx, height);
-        duk_put_prop(ctx, task_bar_obj_idx);
-    }
-
-    return 1;
-}
-
-void
-jduk_set_task_bar_attributes_visibility(duk_context *ctx, duk_idx_t attributes_idx, HWND hwnd) {
-    duk_get_prop_string(ctx, attributes_idx, "visibility");
-    const char *visibility = duk_to_string(ctx, -1);
-    duk_bool_t hidden = strcmp(visibility, "hidden") == 0;
-    SetWindowPos(hwnd, 0, 0, 0, 0, 0, (hidden ? SWP_HIDEWINDOW : SWP_SHOWWINDOW ) | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
-    duk_pop(ctx);
-}
-
-duk_ret_t
-jduk_set_task_bar_attributes(duk_context *ctx) {
-    duk_idx_t window_id_idx = 0;
-    duk_int32_t window_id = duk_to_number(ctx, window_id_idx);
-    HWND hwnd = (HWND)(LONG_PTR)window_id;
-
-    duk_idx_t attributes_idx = -1;
-    if (duk_is_null_or_undefined(ctx, attributes_idx) || !duk_is_object(ctx, attributes_idx)) {
-        duk_pop(ctx);
-        return 0;
-    }
-
-    if (duk_has_prop_string(ctx, attributes_idx, "visibility")) {
-        jduk_set_task_bar_attributes_visibility(ctx, attributes_idx, hwnd);
-    }
-
-    duk_pop(ctx);
-    duk_pop(ctx);
-    return 0;
-}
-
-duk_ret_t
 jduk_exit(duk_context *ctx) {
     duk_int32_t code = duk_to_int32(ctx, -1);
     cleanup();
@@ -630,7 +552,6 @@ jduk_bar_get_attributes(duk_context *ctx) {
     duk_pop(ctx);
     /* duk_pop(ctx); */
 
-    RECT rect;
     WINDOWINFO window_info = { .cbSize = sizeof window_info };
 
     duk_idx_t window_obj_idx = duk_push_object(ctx);
@@ -932,12 +853,6 @@ jduk_init_context(duk_context *ctx, void *udata) {
     duk_push_c_lightfunc(ctx, jduk_close_window, 1, 1, 0);
     duk_put_prop_string(ctx, dwmjs_obj_id, "closeWindow");
 
-    duk_push_c_lightfunc(ctx, jduk_get_task_bar, 0, 0, 0);
-    duk_put_prop_string(ctx, dwmjs_obj_id, "getTaskBar");
-
-    duk_push_c_lightfunc(ctx, jduk_set_task_bar_attributes, 2, 2, 0);
-    duk_put_prop_string(ctx, dwmjs_obj_id, "setTaskBarAttributes");
-
     duk_push_c_function(ctx, jduk_bar_ctor, 1); // var bar = new dwmjs.Bar();
     duk_push_object(ctx); // [Bar proto]
 
@@ -995,6 +910,8 @@ WINAPI WinMain(HINSTANCE hInstance,
                LPSTR lpCmdLine,
                int nShowCmd) {
     MSG msg;
+
+    SetProcessDPIAware();
 
     duk_ctx = duk_create_heap_default();
     if (!duk_ctx) {
