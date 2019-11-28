@@ -242,11 +242,8 @@ BOOL CALLBACK MonitorIdListEnumProc(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lp
 {
     MonitorIdListEnumProcState *state;
     state = (MonitorIdListEnumProcState*)dwData;
-    MONITORINFOEX iMonitor;
-    iMonitor.cbSize = sizeof(MONITORINFOEX);
-    GetMonitorInfo(hMonitor, &iMonitor);
 
-    duk_push_string(state->ctx, iMonitor.szDevice);
+    duk_push_number(state->ctx, (uint64_t)hMonitor);
     duk_put_prop_index(state->ctx, state->monitors_array_idx, state->count);
 
     state->count = state->count + 1;
