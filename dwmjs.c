@@ -192,7 +192,7 @@ LRESULT CALLBACK barhandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             rc.left = barState->x;
             rc.bottom = barState->height + barState->y;
             rc.right = barState->width + barState->x;
-            HBRUSH greenBrush=CreateSolidBrush(RGB(0,255,0));
+            HBRUSH greenBrush=CreateSolidBrush(RGB(0,85, 119)); // #005577
             FillRect(hdc, &rc, greenBrush);
             DeleteObject(greenBrush);
             EndPaint(hwnd, &ps);
