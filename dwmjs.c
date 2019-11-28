@@ -478,7 +478,7 @@ jduk_set_window_attributes_visibility(duk_context *ctx, duk_idx_t attributes_idx
     duk_get_prop_string(ctx, attributes_idx, "visibility");
     const char *visibility = duk_to_string(ctx, -1);
     duk_bool_t hidden = strcmp(visibility, "hidden") == 0;
-    SetWindowPos(hwnd, 0, 0, 0, 0, 0, (hidden ? SWP_HIDEWINDOW : SWP_SHOWWINDOW ) | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
+    SetWindowPos(hwnd, 0, 0, 0, 0, 0, (hidden ? SWP_HIDEWINDOW : SWP_SHOWWINDOW) | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
     duk_pop(ctx);
 }
 
@@ -623,6 +623,58 @@ jduk_bar_finalizer(duk_context *ctx) {
 }
 
 duk_ret_t
+jduk_bar_get_attributes(duk_context *ctx) {
+    duk_push_this(ctx);
+
+    duk_get_prop_string(ctx, -1, DUK_HIDDEN_SYMBOL("id"));
+    duk_int32_t id = duk_to_int(ctx, -1);
+    duk_idx_t result_obj_idx = duk_push_object(ctx);
+
+    duk_push_literal(ctx, "id");
+    duk_push_int(ctx, id);
+    duk_put_prop(ctx, result_obj_idx);
+
+    duk_get_prop_string(ctx, -1, "barState");
+    BarState *barState = (BarState*)duk_to_pointer(ctx, -1);
+
+    HWND hwnd = barState->barhwnd;
+    RECT rect;
+    WINDOWINFO window_info = { .cbSize = sizeof window_info };
+
+    duk_idx_t window_obj_idx = duk_push_object(ctx);
+
+    int exstyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+
+    duk_push_string(ctx, "visibility");
+    duk_push_string(ctx, IsWindowVisible(hwnd) > 0 ? "visible" : "hidden");
+    duk_put_prop(ctx, window_obj_idx);
+
+    if (GetWindowInfo(hwnd, &window_info)) {
+        duk_push_string(ctx, "isActive");
+        duk_push_boolean(ctx, window_info.dwWindowStatus > 0);
+        duk_put_prop(ctx, window_obj_idx);
+
+        duk_push_string(ctx, "x");
+        duk_push_number(ctx, window_info.rcWindow.left);
+        duk_put_prop(ctx, window_obj_idx);
+
+        duk_push_string(ctx, "y");
+        duk_push_number(ctx, window_info.rcWindow.top);
+        duk_put_prop(ctx, window_obj_idx);
+
+        duk_push_string(ctx, "width");
+        duk_push_number(ctx, window_info.rcWindow.right - window_info.rcWindow.left);
+        duk_put_prop(ctx, window_obj_idx);
+
+        duk_push_string(ctx, "height");
+        duk_push_number(ctx, window_info.rcWindow.bottom - window_info.rcWindow.top);
+        duk_put_prop(ctx, window_obj_idx);
+    }
+
+    return 1;
+}
+
+duk_ret_t
 jduk_bar_ctor(duk_context *ctx) {
     if (!duk_is_constructor_call(ctx)) {
         return DUK_RET_TYPE_ERROR;
@@ -645,6 +697,7 @@ jduk_bar_ctor(duk_context *ctx) {
     duk_int32_t underlineWidth = 1;
     const char *backgroundColor = "#ffffff";
     const char *foregroundColor = "#ffffff";
+    const char *visibility = "visible";
 
     if (duk_has_prop_string(ctx, attributes_idx, "x")) {
         duk_get_prop_string(ctx, attributes_idx, "x");
@@ -700,7 +753,14 @@ jduk_bar_ctor(duk_context *ctx) {
         duk_pop(ctx);
     }
 
+    if (duk_has_prop_string(ctx, attributes_idx, "visibility")) {
+        duk_get_prop_string(ctx, attributes_idx, "visibility");
+        visibility = duk_to_string(ctx, -1);
+        duk_pop(ctx);
+    }
+
     setupbar(hinstance);
+
     HWND barhwnd = CreateWindowEx(
         WS_EX_TOOLWINDOW,
         BARNAME,
@@ -718,6 +778,9 @@ jduk_bar_ctor(duk_context *ctx) {
         die("Failed to create bar");
     }
 
+    duk_bool_t hidden = strcmp(visibility, "hidden") == 0;
+    SetWindowPos(barhwnd, 0, 0, 0, 0, 0, (hidden ? SWP_HIDEWINDOW : SWP_SHOWWINDOW) | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
+
     barState->barhwnd = barhwnd;
 
     duk_push_this(ctx);
@@ -729,28 +792,15 @@ jduk_bar_ctor(duk_context *ctx) {
     duk_push_c_function(ctx, jduk_bar_finalizer, 1);
     duk_set_finalizer(ctx, -2);
 
+    duk_push_c_function(ctx, jduk_bar_get_attributes, 0);
+    duk_set_finalizer(ctx, -2);
+
     duk_push_int(ctx, (long)barhwnd);
     duk_put_prop_string(ctx, -2, DUK_HIDDEN_SYMBOL("id"));
 
     CREATESTRUCT *CrtStrPtr = malloc(sizeof(CREATESTRUCT));
     CrtStrPtr->lpCreateParams = barState;
     PostMessage(barhwnd, WM_PAINT, 0, CrtStrPtr);
-
-    return 0;
-}
-
-duk_ret_t
-jduk_bar_get_attributes(duk_context *ctx) {
-    duk_push_this(ctx);
-
-    duk_get_prop_string(ctx, -1, DUK_HIDDEN_SYMBOL("id"));
-    duk_int32_t id = duk_to_int(ctx, -1);
-
-    duk_idx_t result_obj_idx = duk_push_object(ctx);
-
-    duk_push_literal(ctx, "id");
-    duk_push_int(ctx, id);
-    duk_put_prop(ctx, result_obj_idx);
 
     return 1;
 }
