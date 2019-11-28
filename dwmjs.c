@@ -283,54 +283,36 @@ scan(HWND hwnd, LPARAM lParam) {
 
 duk_ret_t
 jduk_get_monitor_by_id(duk_context *ctx) {
-    const char *monitor_id = duk_to_string(ctx, -1);
+    duk_int32_t monitor_id = duk_to_number(ctx, -1);
+    HMONITOR hMonitor = (HMONITOR)monitor_id;
 
-    duk_idx_t monitor_count = 0;
-    DISPLAY_DEVICE display_device;
-    display_device.cb = sizeof(DISPLAY_DEVICE);
+    MONITORINFOEX iMonitor;
+    iMonitor.cbSize = sizeof(MONITORINFOEX);
+    GetMonitorInfo(hMonitor, &iMonitor);
 
-    DWORD deviceNum = 0;
-    while (EnumDisplayDevices(NULL, deviceNum, &display_device, 0)) {
-        DISPLAY_DEVICE new_display_device = {0};
-        new_display_device.cb = sizeof(DISPLAY_DEVICE);
-        DWORD monitorNum = 0;
-        while (EnumDisplayDevices(display_device.DeviceName, monitorNum, &new_display_device, 0))
-        {
-            // Get the display mode settings of this device.
-            DEVMODE devMode;
-            if (!EnumDisplaySettings(display_device.DeviceName, ENUM_CURRENT_SETTINGS, &devMode))
-                continue;
+    duk_idx_t monitor_obj_idx = duk_push_object(ctx);
 
-            /* GetMonitorInfoA(new_display_device.DeviceString, &target); */
+    duk_push_string(ctx, "id");
+    duk_push_number(ctx, monitor_id);
+    duk_put_prop(ctx, monitor_obj_idx);
 
-            if (strcmp(new_display_device.DeviceID, monitor_id) == 0) {
-                duk_idx_t monitor_obj_idx = duk_push_object(ctx);
+    duk_push_string(ctx, "x");
+    duk_push_number(ctx, iMonitor.rcMonitor.left);
+    duk_put_prop(ctx, monitor_obj_idx);
 
-                duk_push_string(ctx, "id");
-                duk_push_string(ctx, monitor_id);
-                duk_put_prop(ctx, monitor_obj_idx);
+    duk_push_string(ctx, "y");
+    duk_push_number(ctx, iMonitor.rcMonitor.top);
+    duk_put_prop(ctx, monitor_obj_idx);
 
-                duk_push_string(ctx, "width");
-                duk_push_number(ctx, devMode.dmPelsWidth);
-                /* duk_push_number(ctx, GetSystemMetrics(SM_CXVIRTUALSCREEN)); */
-                duk_put_prop(ctx, monitor_obj_idx);
+    duk_push_string(ctx, "width");
+    duk_push_number(ctx, iMonitor.rcMonitor.right - iMonitor.rcMonitor.left);
+    duk_put_prop(ctx, monitor_obj_idx);
 
-                duk_push_string(ctx, "height");
-                duk_push_number(ctx, devMode.dmPelsHeight);
-                /* duk_push_number(ctx, GetSystemMetrics(SM_CYVIRTUALSCREEN)); */
-                duk_put_prop(ctx, monitor_obj_idx);
+    duk_push_string(ctx, "height");
+    duk_push_number(ctx, iMonitor.rcMonitor.bottom - iMonitor.rcMonitor.top);
+    duk_put_prop(ctx, monitor_obj_idx);
 
-                return 1;
-            }
-
-            monitor_count++;
-
-            monitorNum++;
-        }
-        deviceNum++;
-    }
-
-    return 0;
+    return 1;
 }
 
 duk_ret_t
