@@ -1,4 +1,5 @@
 #include "duk_config.h"
+#include <stdint.h>
 #define WIN32_LEAN_AND_MEAN
 #define _WIN32_WINNT 0x0600
 
@@ -231,35 +232,36 @@ jduk_alert(duk_context *ctx) {
     return 0;
 }
 
+typedef struct MonitorIdListEnumProcState {
+    duk_context *ctx;
+    uint32_t count;
+    duk_idx_t monitors_array_idx;
+} MonitorIdListEnumProcState;
+
+BOOL CALLBACK MonitorIdListEnumProc(HMONITOR hMonitor, HDC hdcMonitor, LPRECT lprcMonitor, LPARAM dwData)
+{
+    MonitorIdListEnumProcState *state;
+    state = (MonitorIdListEnumProcState*)dwData;
+    MONITORINFOEX iMonitor;
+    iMonitor.cbSize = sizeof(MONITORINFOEX);
+    GetMonitorInfo(hMonitor, &iMonitor);
+
+    duk_push_string(state->ctx, iMonitor.szDevice);
+    duk_put_prop_index(state->ctx, state->monitors_array_idx, state->count);
+
+    state->count = state->count + 1;
+
+    return TRUE;
+}
+
 duk_ret_t
 jduk_get_all_monitors(duk_context *ctx) {
-    duk_idx_t monitors_array_idx = duk_push_array(ctx);
-    duk_idx_t monitor_count = 0;
+    MonitorIdListEnumProcState state;
+    state.ctx = ctx;
+    state.count = 0;
+    state.monitors_array_idx = duk_push_array(ctx);
 
-    DISPLAY_DEVICE display_device;
-    display_device.cb = sizeof(DISPLAY_DEVICE);
-
-    DWORD deviceNum = 0;
-    while (EnumDisplayDevices(NULL, deviceNum, &display_device, 0)) {
-        DISPLAY_DEVICE new_display_device = {0};
-        new_display_device.cb = sizeof(DISPLAY_DEVICE);
-        DWORD monitorNum = 0;
-        while (EnumDisplayDevices(display_device.DeviceName, monitorNum, &new_display_device, 0))
-        {
-            // Get the display mode settings of this device.
-            DEVMODE devMode;
-            if (!EnumDisplaySettings(display_device.DeviceName, ENUM_CURRENT_SETTINGS, &devMode))
-                continue;
-
-            duk_push_string(ctx, new_display_device.DeviceID);
-            duk_put_prop_index(ctx, monitors_array_idx, monitor_count);
-
-            monitor_count++;
-
-            monitorNum++;
-        }
-        deviceNum++;
-    }
+    EnumDisplayMonitors(NULL, NULL, &MonitorIdListEnumProc, (LPARAM)&state);
 
     return 1;
 }
