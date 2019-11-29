@@ -18,8 +18,8 @@ Config is loaded from `~/.dwm.js`. For windows this will be located in `%USERPRO
 ```javascript
 dwmjs.addEventListener('load', function () {
     const monitors = dwmjs.getMonitors();
-    alert(JSON.stringify(monitors)); // ['id1', 'id2']
-    alert(JSON.stringify(monitors[0])); // { id: 'id1', height: 1920, width: 1080 }
+    alert(JSON.stringify(monitors)); // [1,2]
+    alert(JSON.stringify(monitors[0])); // { id: 1, x: 0, y: 0, height: 1920, width: 1080 }
 
     const windows = dwmjs.getWindows();
     alert(JSON.stringify(windows)); // [123,234]
