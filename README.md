@@ -24,11 +24,6 @@ dwmjs.addEventListener('load', function () {
     const windows = dwmjs.getWindows();
     alert(JSON.stringify(windows)); // [123,234]
 
-    const taskBar = dwmjs.getTaskBar();
-    dwmjs.setTaskBarAttributes({
-        visibility: 'hidden', // 'hidden' | 'visible'
-    })
-
     var created = false;
     dwmjs.addEventListener('windowcreate', function (e) {
         if (created) { return; }
