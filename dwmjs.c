@@ -24,19 +24,20 @@ static UINT shellhookid;
 typedef BOOL (*RegisterShellHookWindowProc) (HWND);
 RegisterShellHookWindowProc _RegisterShellHookWindow;
 
-static void cleanup();
-static void die(const char *fmt, ...);
-static void setup(HINSTANCE hInstance);
-static void setupbar(HINSTANCE hInstance);
-static BOOL CALLBACK scan(HWND hwnd, LPARAM lParam);
-LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
 typedef struct BarState {
     duk_int32_t x;
     duk_int32_t y;
     duk_int32_t width;
     duk_int32_t height;
 } BarState;
+
+static void cleanup();
+static void die(const char *fmt, ...);
+static void drawbar(HWND hwnd, BarState *barState);
+static void setup(HINSTANCE hInstance);
+static void setupbar(HINSTANCE hInstance);
+static BOOL CALLBACK scan(HWND hwnd, LPARAM lParam);
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 static void
 die(const char *fmt, ...) {
@@ -174,6 +175,23 @@ setup(HINSTANCE hInstance) {
     shellhookid = RegisterWindowMessage("SHELLHOOK");
 }
 
+static void
+drawbar(HWND barhwnd, BarState *barState) {
+    HDC hdc;
+    hdc = GetWindowDC(barhwnd);
+
+    RECT rc;
+    rc.top = barState->y;
+    rc.left = barState->x;
+    rc.bottom = barState->height + barState->y;
+    rc.right = barState->width + barState->x;
+    HBRUSH greenBrush=CreateSolidBrush(RGB(0,85, 119)); // #005577
+
+    FillRect(hdc, &rc, greenBrush);
+
+    DeleteObject(greenBrush);
+}
+
 LRESULT CALLBACK barhandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     BarState *barState = NULL;
     switch (msg) {
@@ -187,14 +205,7 @@ LRESULT CALLBACK barhandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             barState = (BarState*) CrtStrPtr->lpCreateParams;
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
-            RECT rc;
-            rc.top = barState->y;
-            rc.left = barState->x;
-            rc.bottom = barState->height + barState->y;
-            rc.right = barState->width + barState->x;
-            HBRUSH greenBrush=CreateSolidBrush(RGB(0,85, 119)); // #005577
-            FillRect(hdc, &rc, greenBrush);
-            DeleteObject(greenBrush);
+            drawbar(hwnd, barState);
             EndPaint(hwnd, &ps);
             break;
         }
