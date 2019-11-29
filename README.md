@@ -52,20 +52,6 @@ dwmjs.addEventListener('load', function () {
         }
     });
 
-    var bar = new dwmjs.Bar({
-        x: 0,
-        y: 0,
-        height: 16,
-        width: 200,
-        font: 'Consolas',
-        underlineColor: '#dddddd',
-        underlineWidth: 1,
-        backgroundColor: '#ffffff',
-        foregroundColor: '#cccccc',
-    });
-
-    var barAttributes = bar.getAttributes();
-
     dwmjs.exit(0 /* status code */);
 });
 ```

@@ -14,7 +14,6 @@
 #include "duktape.h"
 
 #define NAME                    "dwmjs"     /* Used for window name/class */
-#define BARNAME                 "dwmjsbar"  /* Used for window name/class */
 #define PATH_SEPERATOR          "\\"
 static HWND dwmhwnd;
 static HINSTANCE hinstance;
@@ -24,18 +23,9 @@ static UINT shellhookid;
 typedef BOOL (*RegisterShellHookWindowProc) (HWND);
 RegisterShellHookWindowProc _RegisterShellHookWindow;
 
-typedef struct BarState {
-    duk_int32_t x;
-    duk_int32_t y;
-    duk_int32_t width;
-    duk_int32_t height;
-} BarState;
-
 static void cleanup();
 static void die(const char *fmt, ...);
-static void drawbar(HWND hwnd, BarState *barState);
 static void setup(HINSTANCE hInstance);
-static void setupbar(HINSTANCE hInstance);
 static BOOL CALLBACK scan(HWND hwnd, LPARAM lParam);
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
@@ -175,77 +165,6 @@ setup(HINSTANCE hInstance) {
     shellhookid = RegisterWindowMessage("SHELLHOOK");
 }
 
-static void
-drawbar(HWND barhwnd, BarState *barState) {
-    HDC hdc;
-    hdc = GetWindowDC(barhwnd);
-
-    RECT rc;
-    rc.top = barState->y;
-    rc.left = barState->x;
-    rc.bottom = barState->height + barState->y;
-    rc.right = barState->width + barState->x;
-    HBRUSH greenBrush=CreateSolidBrush(RGB(0,85, 119)); // #005577
-
-    FillRect(hdc, &rc, greenBrush);
-
-    DeleteObject(greenBrush);
-}
-
-LRESULT CALLBACK barhandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
-    BarState *barState = NULL;
-    switch (msg) {
-        case WM_CREATE:
-            CREATESTRUCT *CrtStrPtr = (CREATESTRUCT *)lParam;
-            barState = (BarState*) CrtStrPtr->lpCreateParams;
-            SetWindowPos(hwnd, HWND_TOPMOST, barState->x, barState->y, barState->x + barState->width, barState->y + barState->height, SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
-            break;
-        case WM_PAINT: {
-            CREATESTRUCT *CrtStrPtr = (CREATESTRUCT *)lParam;
-            barState = (BarState*) CrtStrPtr->lpCreateParams;
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hwnd, &ps);
-            drawbar(hwnd, barState);
-            EndPaint(hwnd, &ps);
-            break;
-        }
-        case WM_LBUTTONDOWN:
-        case WM_RBUTTONDOWN:
-        case WM_MBUTTONDOWN:
-            /* buttonpress(msg, &MAKEPOINTS(lParam)); */
-            break;
-        case WM_TIMER:
-            /* drawbar(); */
-        default:
-            return DefWindowProc(hwnd, msg, wParam, lParam);
-    }
-
-    return 0;
-}
-
-static int setupbarcomplete = 0;
-static void
-setupbar(HINSTANCE hInstance) {
-    if (setupbarcomplete) { return; }
-    WNDCLASS winClass;
-    memset(&winClass, 0, sizeof winClass);
-
-    winClass.style = 0;
-    winClass.lpfnWndProc = barhandler;
-    winClass.cbClsExtra = 0;
-    winClass.cbWndExtra = 0;
-    winClass.hInstance = hInstance;
-    winClass.hIcon = NULL;
-    winClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-    winClass.hbrBackground = NULL;
-    winClass.lpszMenuName = NULL;
-    winClass.lpszClassName = BARNAME;
-
-    if (!RegisterClass(&winClass))
-        die("Error registering dwmjs-bar window class");
-
-    setupbarcomplete = 1;
-}
 
 duk_ret_t
 jduk_alert(duk_context *ctx) {
@@ -305,10 +224,10 @@ scan(HWND hwnd, LPARAM lParam) {
 
 duk_ret_t
 jduk_get_monitor_by_id(duk_context *ctx) {
-    duk_int32_t monitor_id = duk_to_number(ctx, -1);
+    size_t monitor_id = duk_to_number(ctx, -1);
     HMONITOR hMonitor = (HMONITOR)monitor_id;
 
-    MONITORINFOEX iMonitor;
+    MONITORINFO iMonitor;
     iMonitor.cbSize = sizeof(MONITORINFOEX);
     GetMonitorInfo(hMonitor, &iMonitor);
 
@@ -318,9 +237,9 @@ jduk_get_monitor_by_id(duk_context *ctx) {
     duk_push_number(ctx, monitor_id);
     duk_put_prop(ctx, monitor_obj_idx);
 
-    duk_push_string(ctx, "name");
-    duk_push_string(ctx, iMonitor.szDevice);
-    duk_put_prop(ctx, monitor_obj_idx);
+    /* duk_push_string(ctx, "name"); */
+    /* duk_push_string(ctx, iMonitor.szDevice); */
+    /* duk_put_prop(ctx, monitor_obj_idx); */
 
     duk_push_string(ctx, "x");
     duk_push_number(ctx, iMonitor.rcMonitor.left);
@@ -536,273 +455,6 @@ jduk_exit(duk_context *ctx) {
     return 0;
 }
 
-duk_ret_t
-jduk_bar_finalizer(duk_context *ctx) {
-    duk_get_prop_string(ctx, -1, "barState");
-    BarState *barState = (BarState*)duk_to_pointer(ctx, -1);
-
-    if (barState) {
-        free(barState);
-        barState = NULL;
-    }
-
-    return 0;
-}
-
-duk_ret_t
-jduk_bar_get_attributes(duk_context *ctx) {
-    duk_push_this(ctx);
-
-    duk_get_prop_string(ctx, -1, DUK_HIDDEN_SYMBOL("id"));
-    duk_int32_t id = duk_to_number(ctx, -1);
-    HWND hwnd = (HWND)(LONG_PTR)id;
-    duk_pop(ctx);
-    /* duk_pop(ctx); */
-
-    WINDOWINFO window_info = { .cbSize = sizeof window_info };
-
-    duk_idx_t window_obj_idx = duk_push_object(ctx);
-
-    duk_push_literal(ctx, "id");
-    duk_push_number(ctx, id);
-    duk_put_prop(ctx, window_obj_idx);
-
-    int exstyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-
-    duk_push_string(ctx, "visibility");
-    duk_push_string(ctx, IsWindowVisible(hwnd) > 0 ? "visible" : "hidden");
-    duk_put_prop(ctx, window_obj_idx);
-
-    if (GetWindowInfo(hwnd, &window_info)) {
-        duk_push_string(ctx, "isActive");
-        duk_push_boolean(ctx, window_info.dwWindowStatus > 0);
-        duk_put_prop(ctx, window_obj_idx);
-
-        duk_push_string(ctx, "x");
-        duk_push_number(ctx, window_info.rcWindow.left);
-        duk_put_prop(ctx, window_obj_idx);
-
-        duk_push_string(ctx, "y");
-        duk_push_number(ctx, window_info.rcWindow.top);
-        duk_put_prop(ctx, window_obj_idx);
-
-        duk_push_string(ctx, "width");
-        duk_push_number(ctx, window_info.rcWindow.right - window_info.rcWindow.left);
-        duk_put_prop(ctx, window_obj_idx);
-
-        duk_push_string(ctx, "height");
-        duk_push_number(ctx, window_info.rcWindow.bottom - window_info.rcWindow.top);
-        duk_put_prop(ctx, window_obj_idx);
-    }
-
-    return 1;
-}
-
-duk_ret_t
-jduk_bar_set_attributes(duk_context *ctx) {
-    duk_idx_t attributes_idx = -1;
-    if (duk_is_null_or_undefined(ctx, attributes_idx) || !duk_is_object(ctx, attributes_idx)) {
-        duk_pop(ctx);
-        return 0;
-    }
-
-    const char *visibility = "visible";
-    if (duk_has_prop_string(ctx, attributes_idx, "visibility")) {
-        duk_get_prop_string(ctx, attributes_idx, "visibility");
-        visibility = duk_to_string(ctx, -1);
-        duk_pop(ctx);
-    }
-
-    duk_int32_t x = 0;
-    if (duk_has_prop_string(ctx, attributes_idx, "x")) {
-        duk_get_prop_string(ctx, attributes_idx, "x");
-        x = duk_to_number(ctx, -1);
-        duk_pop(ctx);
-    }
-
-    duk_int32_t y = 0;
-    if (duk_has_prop_string(ctx, attributes_idx, "y")) {
-        duk_get_prop_string(ctx, attributes_idx, "y");
-        y = duk_to_number(ctx, -1);
-        duk_pop(ctx);
-    }
-
-    duk_int32_t width = 0;
-    if (duk_has_prop_string(ctx, attributes_idx, "width")) {
-        duk_get_prop_string(ctx, attributes_idx, "width");
-        width = duk_to_number(ctx, -1);
-        duk_pop(ctx);
-    }
-
-    duk_int32_t height = 0;
-    if (duk_has_prop_string(ctx, attributes_idx, "height")) {
-        duk_get_prop_string(ctx, attributes_idx, "height");
-        height = duk_to_number(ctx, -1);
-        duk_pop(ctx);
-    }
-
-    duk_push_this(ctx);
-
-    duk_get_prop_string(ctx, -1, DUK_HIDDEN_SYMBOL("id"));
-    duk_int32_t id = duk_to_number(ctx, -1);
-    HWND barhwnd = (HWND)(LONG_PTR)id;
-    duk_pop(ctx);
-
-
-    /* int exstyle = GetWindowLong(barhwnd, GWL_EXSTYLE); */
-
-    duk_get_prop_string(ctx, -1, "barState");
-    BarState *barState = (BarState*)duk_to_pointer(ctx, -1);
-    barState->x = x;
-    barState->y = y;
-    barState->width = width;
-    barState->height = height;
-    duk_pop(ctx);
-
-    duk_pop(ctx);
-
-    duk_bool_t hidden = strcmp(visibility, "hidden") == 0;
-    SetWindowPos(barhwnd, HWND_TOPMOST, x, y, width + x, height + y, (hidden ? SWP_HIDEWINDOW : SWP_SHOWWINDOW) | SWP_NOACTIVATE | SWP_NOSENDCHANGING);
-
-    CREATESTRUCT *CrtStrPtr = malloc(sizeof(CREATESTRUCT));
-    CrtStrPtr->lpCreateParams = barState;
-    PostMessage(barhwnd, WM_PAINT, 0, (LPARAM)CrtStrPtr);
-
-    return 0;
-}
-
-duk_ret_t
-jduk_bar_ctor(duk_context *ctx) {
-    if (!duk_is_constructor_call(ctx)) {
-        return DUK_RET_TYPE_ERROR;
-    }
-
-    duk_idx_t attributes_idx = -1;
-    if (duk_is_null_or_undefined(ctx, attributes_idx) || !duk_is_object(ctx, attributes_idx)) {
-        MessageBox(NULL, "bar.ctor null", "dwmjs: Info", MB_OK);
-        duk_pop(ctx);
-        return 0;
-    }
-
-    BarState *barState = (BarState*)malloc(sizeof(BarState));
-    if (!barState) {
-        die("Failed to allocate memory to create barState");
-    }
-
-    const char *font = "Consolas";
-    const char *underlineColor = "#ffffff";
-    duk_int32_t underlineWidth = 1;
-    const char *backgroundColor = "#ffffff";
-    const char *foregroundColor = "#ffffff";
-    const char *visibility = "visible";
-
-    if (duk_has_prop_string(ctx, attributes_idx, "x")) {
-        duk_get_prop_string(ctx, attributes_idx, "x");
-        barState->x = duk_to_int32(ctx, -1);
-        duk_pop(ctx);
-    }
-
-    if (duk_has_prop_string(ctx, attributes_idx, "y")) {
-        duk_get_prop_string(ctx, attributes_idx, "y");
-        barState->y = duk_to_int32(ctx, -1);
-        duk_pop(ctx);
-    }
-
-    if (duk_has_prop_string(ctx, attributes_idx, "width")) {
-        duk_get_prop_string(ctx, attributes_idx, "width");
-        barState->width = duk_to_int32(ctx, -1);
-        duk_pop(ctx);
-    }
-
-    if (duk_has_prop_string(ctx, attributes_idx, "height")) {
-        duk_get_prop_string(ctx, attributes_idx, "height");
-        barState->height = duk_to_int32(ctx, -1);
-        duk_pop(ctx);
-    }
-
-    if (duk_has_prop_string(ctx, attributes_idx, "font")) {
-        duk_get_prop_string(ctx, attributes_idx, "font");
-        font = duk_to_string(ctx, -1);
-        duk_pop(ctx);
-    }
-
-    if (duk_has_prop_string(ctx, attributes_idx, "backgroundColor")) {
-        duk_get_prop_string(ctx, attributes_idx, "backgroundColor");
-        backgroundColor = duk_to_string(ctx, -1);
-        duk_pop(ctx);
-    }
-
-    if (duk_has_prop_string(ctx, attributes_idx, "foregroundColor")) {
-        duk_get_prop_string(ctx, attributes_idx, "foregroundColor");
-        foregroundColor = duk_to_string(ctx, -1);
-        duk_pop(ctx);
-    }
-
-    if (duk_has_prop_string(ctx, attributes_idx, "underlineColor")) {
-        duk_get_prop_string(ctx, attributes_idx, "underlineColor");
-        underlineColor = duk_to_string(ctx, -1);
-        duk_pop(ctx);
-    }
-
-    if (duk_has_prop_string(ctx, attributes_idx, "underlineWidth")) {
-        duk_get_prop_string(ctx, attributes_idx, "underlineWidth");
-        underlineWidth = duk_to_int32(ctx, -1);
-        duk_pop(ctx);
-    }
-
-    if (duk_has_prop_string(ctx, attributes_idx, "visibility")) {
-        duk_get_prop_string(ctx, attributes_idx, "visibility");
-        visibility = duk_to_string(ctx, -1);
-        duk_pop(ctx);
-    }
-
-    setupbar(hinstance);
-
-    HWND barhwnd = CreateWindowEx(
-        WS_EX_TOOLWINDOW,
-        BARNAME,
-        NULL, /* window title */
-        WS_POPUP | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
-        0, 0, 0, 0,
-        NULL, /* parent window */
-        NULL, /* menu */
-        hinstance,
-        barState
-    );
-
-    if (!barhwnd) {
-        free(barState);
-        die("Failed to create bar");
-    }
-
-    duk_bool_t hidden = strcmp(visibility, "hidden") == 0;
-    SetWindowPos(barhwnd, 0, 0, 0, 0, 0, (hidden ? SWP_HIDEWINDOW : SWP_SHOWWINDOW) | SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER);
-
-    duk_push_this(ctx);
-
-    duk_idx_t finalizer_obj_id = duk_push_object(ctx);
-    duk_push_pointer(ctx, barState);
-    duk_put_prop_string(ctx, finalizer_obj_id, "barState");
-
-    duk_push_c_function(ctx, jduk_bar_finalizer, 1);
-    duk_set_finalizer(ctx, -2);
-
-    duk_push_c_function(ctx, jduk_bar_get_attributes, 0);
-    duk_put_prop_string(ctx, -2, "getAttributes");
-
-    duk_push_c_function(ctx, jduk_bar_set_attributes, 1);
-    duk_put_prop_string(ctx, -2, "setAttributes");
-
-    duk_push_int(ctx, (long)barhwnd);
-    duk_put_prop_string(ctx, -2, DUK_HIDDEN_SYMBOL("id"));
-
-    CREATESTRUCT *CrtStrPtr = malloc(sizeof(CREATESTRUCT));
-    CrtStrPtr->lpCreateParams = barState;
-    PostMessage(barhwnd, WM_PAINT, 0, CrtStrPtr);
-
-    return 1;
-}
-
 #define EVENT_LISTENER_JS_CODE "(function(dwmjs) {"\
     "var listeners = {};"\
     "dwmjs.dispatchEvent = function (type, data) {"\
@@ -855,19 +507,6 @@ jduk_init_context(duk_context *ctx, void *udata) {
 
     duk_push_c_lightfunc(ctx, jduk_close_window, 1, 1, 0);
     duk_put_prop_string(ctx, dwmjs_obj_id, "closeWindow");
-
-    duk_push_c_function(ctx, jduk_bar_ctor, 1); // var bar = new dwmjs.Bar();
-    duk_push_object(ctx); // [Bar proto]
-
-    duk_push_c_lightfunc(ctx, jduk_bar_get_attributes, 0, 0, 0);
-    duk_put_prop_string(ctx, -2, "getAttributes");
-
-    duk_push_c_lightfunc(ctx, jduk_bar_set_attributes, 1, 1, 1);
-    duk_put_prop_string(ctx, -2, "setAttributes");
-
-    duk_put_prop_string(ctx, -2, "prototype");
-
-    duk_put_prop_string(ctx, dwmjs_obj_id, "Bar");
 
     duk_put_global_string(ctx, "dwmjs");
 
