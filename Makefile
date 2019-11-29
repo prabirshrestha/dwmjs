@@ -1,6 +1,6 @@
 include config.mk
 
-TARGET_EXEC ?= dwmjs.exe
+TARGET_EXEC ?= dwmjs${EXE}
 
 SRCS = duktape.c dwmjs.c
 OBJS = ${SRCS:.c=.o}

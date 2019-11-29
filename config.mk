@@ -9,7 +9,9 @@ CPPFLAGS = -DVERSION=\"${VERSION}\"
 CFLAGS = -target x86_64-windows-msvc -std=c99 -pedantic -Wall -Os ${CPPFLAGS}
 LDFLAGS = -target x86_64-windows-msvc
 
-EXE=.exe
+ifeq ($(OS),Windows_NT)
+	EXE=.exe
+endif
 
 # compiler and linker
 CC = clang
