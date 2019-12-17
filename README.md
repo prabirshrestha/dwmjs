@@ -55,3 +55,13 @@ dwmjs.addEventListener('load', function () {
     dwmjs.exit(0 /* status code */);
 });
 ```
+
+## TODO
+
+- [ ] Add support for custom bar - https://github.com/LemonBoy/bar
+```javascript
+var bar = new Bar({ x: 0, y: 0, width: 1080, height: 20 });
+bar.draw('.....');
+```
+- [ ] Implement initial tiling manager
+- [ ] detect screen resolution changes
